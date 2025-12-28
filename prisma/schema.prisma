@@ -1,0 +1,579 @@
+// Prisma Schema for CupSipSmart
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Users
+model User {
+  userId              String   @id @default(uuid())
+  studentId           String?
+  email               String   @unique
+  displayName         String?
+  avatar              String?
+  walletBalance       Float    @default(0)
+  greenPoints         Int      @default(0)
+  rankLevel           String   @default("seed") // seed | sprout | sapling | tree | forest
+  totalCupsSaved      Int      @default(0)
+  totalPlasticReduced Int      @default(0) // grams
+  createdAt           DateTime @default(now())
+  lastActivity        DateTime @default(now())
+  isBlacklisted       Boolean  @default(false)
+  blacklistReason     String?
+  blacklistCount      Int      @default(0)
+
+  // Relations
+  ecoActions      EcoAction[]
+  transactions    Transaction[]
+  feedPosts       GreenFeedPost[]
+  comments        Comment[]
+  friendRequestsSent FriendRequest[] @relation("SentRequests")
+  friendRequestsReceived FriendRequest[] @relation("ReceivedRequests")
+  friendships1    Friendship[] @relation("User1")
+  friendships2    Friendship[] @relation("User2")
+  stories         Story[]
+  notifications   Notification[]
+  virtualTree     VirtualTree?
+
+  @@index([email])
+  @@index([studentId])
+  @@index([isBlacklisted])
+}
+
+// Eco Actions (User activity history)
+model EcoAction {
+  actionId    String   @id @default(uuid())
+  userId      String
+  type        String   // borrow | return | checkin | share
+  cupId       String?
+  points      Int      @default(0)
+  timestamp   DateTime @default(now())
+  description String
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// Cups
+model Cup {
+  cupId              String   @id
+  material           String   // pp_plastic | bamboo_fiber
+  status             String   @default("available") // available | in_use | cleaning | lost
+  createdAt          DateTime @default(now())
+  lastCleanedAt      DateTime?
+  totalUses          Int      @default(0)
+  currentUserId      String?
+  currentTransactionId String?
+
+  // Relations
+  transactions Transaction[]
+
+  @@index([status])
+  @@index([currentUserId])
+}
+
+// Transactions
+model Transaction {
+  transactionId      String   @id @default(uuid())
+  userId             String
+  cupId              String
+  borrowStoreId      String
+  returnStoreId      String?
+  borrowTime         DateTime @default(now())
+  dueTime            DateTime
+  returnTime         DateTime?
+  status             String   @default("ongoing") // ongoing | completed | overdue | cancelled
+  depositAmount      Float
+  refundAmount       Float?
+  greenPointsEarned  Int?
+  isOverdue          Boolean  @default(false)
+  overdueHours       Int?
+
+  // Relations
+  user User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  cup  Cup   @relation(fields: [cupId], references: [cupId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cupId])
+  @@index([status])
+  @@index([borrowTime])
+}
+
+// Stores
+model Store {
+  storeId         String   @id @default(uuid())
+  name            String
+  gpsLat          Float
+  gpsLng          Float
+  address         String
+  cupAvailable    Int      @default(0)
+  cupInUse        Int      @default(0)
+  cupCleaning     Int      @default(0)
+  cupTotal        Int      @default(0)
+  partnerStatus   String   @default("active") // active | inactive | pending
+  createdAt       DateTime @default(now())
+
+  @@index([partnerStatus])
+}
+
+// Admins
+model Admin {
+  adminId     String   @id @default(uuid())
+  email       String   @unique
+  displayName String
+  role        String   // super_admin | store_admin
+  storeId     String?
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+}
+
+// Admin Actions (Log)
+model AdminAction {
+  actionId   String   @id @default(uuid())
+  adminId    String
+  type       String   // create_qr | distribute_cups | blacklist_user | update_inventory
+  details    String
+  timestamp  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([timestamp])
+}
+
+// Leaderboard (cached/aggregated)
+model Leaderboard {
+  entryId        String   @id @default(uuid())
+  userId         String   @unique
+  displayName    String
+  avatar         String?
+  greenPoints    Int      @default(0)
+  totalCupsSaved Int      @default(0)
+  rank           Int
+  department     String?
+  class          String?
+  updatedAt      DateTime @default(now())
+
+  @@index([rank])
+  @@index([greenPoints])
+}
+
+// Virtual Trees
+model VirtualTree {
+  treeId         String   @id @default(uuid())
+  userId         String   @unique
+  level          Int      @default(1) // 1-10
+  growth         Float    @default(0) // 0-100%
+  health         String   @default("healthy") // healthy | wilting | dead
+  lastWatered    DateTime @default(now())
+  totalWaterings Int      @default(0)
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Green Feed Posts
+model GreenFeedPost {
+  postId           String   @id @default(uuid())
+  userId           String
+  displayName      String?
+  avatar           String?
+  imageUrl         String
+  caption          String?
+  cupId            String?
+  greenPointsEarned Int     @default(0)
+  likes            Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  comments Comment[]
+  postLikes PostLike[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Comments on Green Feed Posts
+model Comment {
+  commentId   String   @id @default(uuid())
+  postId      String
+  userId      String
+  displayName String?
+  content     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  post GreenFeedPost @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}
+
+// Post Likes (many-to-many relationship)
+model PostLike {
+  likeId   String   @id @default(uuid())
+  postId   String
+  userId   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  post GreenFeedPost @relation(fields: [postId], references: [postId], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+// Friend Requests
+model FriendRequest {
+  requestId  String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  status     String   @default("pending") // pending | accepted | rejected
+  createdAt  DateTime @default(now())
+
+  // Relations
+  fromUser User @relation("SentRequests", fields: [fromUserId], references: [userId], onDelete: Cascade)
+  toUser   User @relation("ReceivedRequests", fields: [toUserId], references: [userId], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+}
+
+// Friendships (after request accepted)
+model Friendship {
+  friendshipId String   @id @default(uuid())
+  userId1      String
+  userId2      String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user1 User @relation("User1", fields: [userId1], references: [userId], onDelete: Cascade)
+  user2 User @relation("User2", fields: [userId2], references: [userId], onDelete: Cascade)
+
+  @@unique([userId1, userId2])
+  @@index([userId1])
+  @@index([userId2])
+}
+
+// Stories
+model Story {
+  storyId        String   @id @default(uuid())
+  userId         String
+  displayName    String?
+  avatar         String?
+  type           String   // image | video | achievement | milestone
+  content        String
+  thumbnail      String?
+  achievementType String? // cup_saved | points | rank_up | challenge
+  achievementData String? // JSON string
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  // Relations
+  user       User         @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  storyViews StoryView[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+// Story Views
+model StoryView {
+  viewId    String   @id @default(uuid())
+  storyId   String
+  userId    String
+  viewedAt  DateTime @default(now())
+
+  // Relations
+  story Story @relation(fields: [storyId], references: [storyId], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+}
+
+// Notifications
+model Notification {
+  notificationId String   @id @default(uuid())
+  userId         String
+  type           String   // success | warning | info | reminder
+  title          String
+  message        String
+  url            String?
+  data           String?  // JSON string
+  read           Boolean  @default(false)
+  timestamp      DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([timestamp])
+}
+
+// ============= NEW FEATURES =============
+
+// Achievements & Badges
+model Achievement {
+  achievementId String   @id @default(uuid())
+  badgeId       String   @unique
+  name          String
+  description   String
+  icon          String
+  rarity        String   // common | rare | epic | legendary
+  requirement   Int      // số lần/điểm cần đạt
+  rewardPoints  Int      @default(0)
+  specialReward String?  // Voucher, QR code đặc biệt
+  category      String   // cups | social | streak | eco | special
+  createdAt     DateTime @default(now())
+
+  // Relations
+  userAchievements UserAchievement[]
+
+  @@index([rarity])
+  @@index([category])
+}
+
+// User Achievements (Unlocked badges)
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  progress      Int      @default(0) // Tiến trình hiện tại
+
+  // Relations
+  achievement Achievement @relation(fields: [achievementId], references: [achievementId], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+}
+
+// Rewards Store
+model Reward {
+  rewardId    String   @id @default(uuid())
+  name        String
+  description String
+  image       String
+  pointsCost  Int
+  stock       Int      @default(0)
+  category    String   // voucher | merchandise | privilege | charity
+  validUntil  DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  rewardClaims RewardClaim[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+// Reward Claims (User đổi thưởng)
+model RewardClaim {
+  claimId    String   @id @default(uuid())
+  userId     String
+  rewardId   String
+  pointsUsed Int
+  status     String   @default("pending") // pending | claimed | expired
+  claimedAt  DateTime @default(now())
+  usedAt     DateTime?
+
+  // Relations
+  reward Reward @relation(fields: [rewardId], references: [rewardId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rewardId])
+  @@index([status])
+}
+
+// Challenges & Events
+model Challenge {
+  challengeId  String   @id @default(uuid())
+  name         String
+  description  String
+  type         String   // weekly | special | event
+  requirement  String   // JSON: {type: 'return_fast', count: 10, timeLimit: 2}
+  rewardPoints Int
+  rewardBadge  String?  // Badge ID nếu có
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  userChallenges UserChallenge[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// User Challenges (Tiến trình challenge của user)
+model UserChallenge {
+  id          String   @id @default(uuid())
+  userId      String
+  challengeId String
+  progress    Int      @default(0)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  joinedAt    DateTime @default(now())
+
+  // Relations
+  challenge Challenge @relation(fields: [challengeId], references: [challengeId], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+  @@index([challengeId])
+  @@index([completed])
+}
+
+// Payment Methods (Thanh toán đa dạng)
+model PaymentMethod {
+  id            String   @id @default(uuid())
+  userId        String
+  type          String   // vnpay | momo | zalopay | bank_card | student_card
+  provider      String
+  accountNumber String?
+  accountName   String?
+  isDefault     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+}
+
+// Payment Transactions
+model PaymentTransaction {
+  id              String   @id @default(uuid())
+  userId          String
+  type            String   // deposit | topup | refund | penalty
+  amount          Float
+  paymentMethod   String
+  transactionCode String   @unique
+  status          String   @default("pending") // pending | success | failed
+  description     String?
+  metadata        String?  // JSON
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Admin Roles & Permissions
+model AdminRole {
+  id          String   @id @default(uuid())
+  roleName    String   @unique
+  permissions String   // JSON array: ['view_dashboard', 'create_qr', ...]
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([roleName])
+}
+
+// Campaigns (Marketing campaigns)
+model Campaign {
+  campaignId  String   @id @default(uuid())
+  name        String
+  description String
+  type        String   // happy_hour | welcome | double_points | bonus
+  target      String   // all | freshmen | top_users
+  rewardType  String   // points_multiplier | fixed_points | badge
+  rewardValue String   // JSON: {multiplier: 2} hoặc {points: 100}
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([type])
+  @@index([isActive])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// System Settings
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   // JSON string
+  dataType  String   // number | boolean | string | json
+  category  String   // deposit | points | gamification | features
+  updatedAt DateTime @updatedAt
+  updatedBy String?  // Admin ID
+
+  @@index([category])
+  @@index([key])
+}
+
+// Incidents (Sự cố)
+model Incident {
+  incidentId  String   @id @default(uuid())
+  type        String   // lost_cup | damaged_cup | overdue | complaint
+  cupId       String?
+  userId      String?
+  storeId     String?
+  description String
+  status      String   @default("open") // open | investigating | resolved | closed
+  priority    String   @default("medium") // low | medium | high | critical
+  assignedTo  String?  // Admin ID
+  resolution  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  resolvedAt  DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// Auto Reports (Báo cáo tự động)
+model AutoReport {
+  reportId    String   @id @default(uuid())
+  type        String   // daily | weekly | monthly
+  recipients  String   // JSON array of emails
+  lastSent    DateTime?
+  nextSend    DateTime
+  isActive    Boolean  @default(true)
+  config      String?  // JSON: metrics to include
+  createdAt   DateTime @default(now())
+
+  @@index([type])
+  @@index([isActive])
+  @@index([nextSend])
+}
+
+// Mini Games Scores
+model GameScore {
+  scoreId   String   @id @default(uuid())
+  userId    String
+  gameType  String   // tree_watering | cup_catch | eco_quiz
+  score     Int
+  reward    Int      // Green Points earned
+  metadata  String?  // JSON: game data
+  playedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([gameType])
+  @@index([score])
+  @@index([playedAt])
+}

@@ -1,0 +1,133 @@
+Dưới đây là một bản **Prompt (Câu lệnh điều hướng)** chi tiết và chuyên nghiệp, được thiết kế để bạn cung cấp cho AI hoặc đội ngũ lập trình nhằm xây dựng hệ sinh thái **CupSipMart**. Nội dung được tổng hợp từ các nghiên cứu thực tế về hành vi Gen Z , các rào cản tâm lý , và mục tiêu tối ưu hóa mô hình "Mượn ly - Trả ly" bằng công nghệ.
+
+---
+
+# PROMPT: XÂY DỰNG HỆ THỐNG QUẢN LÝ TIÊU DÙNG BỀN VỮNG "CUPSIPMART"
+
+## 1. TỔNG QUAN DỰ ÁN
+
+* **Tên dự án:** CupSipMart (thuộc hệ sinh thái Sip Smart).
+* 
+**Mục tiêu:** Giảm thiểu rác thải nhựa dùng một lần thông qua mô hình mượn trả ly tái sử dụng.
+
+
+* 
+**Đối tượng trọng tâm:** Sinh viên Gen Z (ưu tiên khu vực làng đại học).
+
+
+* 
+**Nguyên tắc thiết kế:** Tiện lợi như đồ nhựa, hấp dẫn như trò chơi, minh bạch về tài chính và tác động môi trường.
+
+
+
+---
+
+## 2. CẤU TRÚC DỮ LIỆU (DATABASE SCHEMA)
+
+Hãy thiết lập cơ sở dữ liệu quan hệ (PostgreSQL/MySQL) với các bảng sau:
+
+### A. Quản lý Người dùng & Đối tác
+
+* 
+**Users:** `user_id`, `student_id`, `wallet_balance` (quản lý tiền cọc ), `green_points`, `rank_level`, `eco_history`.
+
+
+* 
+**Admins:** `admin_id`, `role` (Super Admin/Store Admin), `action_log` (lưu vết thao tác tạo mã QR, điều phối kho).
+
+
+* **Stores:** `store_id`, `name`, `gps_location`, `cup_inventory` (số lượng ly hiện có), `partner_status`.
+
+### B. Quản lý Tài sản & Giao dịch
+
+* 
+**Cups:** `cup_id` (UUID từ mã QR), `material` (Nhựa PP cao cấp/Sợi tre) , `status` (Available/In_use/Cleaning/Lost).
+
+
+* **Transactions:** `transaction_id`, `user_id`, `cup_id`, `borrow_store_id`, `return_store_id`, `borrow_time`, `due_time` (Hạn trả), `status` (Ongoing/Completed/Overdue).
+
+---
+
+## 3. CÁC PHÂN HỆ CHỨC NĂNG CHI TIẾT
+
+### 3.1. Phân hệ User (Tối ưu cho Mini App Zalo/MoMo)
+
+Để vượt qua rào cản "ngại tải app", giao diện cần tích hợp các chức năng:
+
+* **Quét QR đa năng:** Tự động nhận diện hành vi Mượn/Trả dựa trên trạng thái ly.
+* 
+**Pop-up "Cảm hứng xanh":** Hiển thị ngay sau khi mượn thành công với thông điệp: *"🌟 Mượn ly thành công! Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!"*.
+
+
+* 
+**Ví điện tử & Hoàn tiền cọc:** Tự động trừ/hoàn cọc . Tích hợp giảm giá trực tiếp  mỗi ly nước khi mượn ly.
+
+
+* 
+**Smart Push Notification:** Nhắc nhở qua tin nhắn App trước hạn trả 2 tiếng hoặc khi sinh viên ở gần điểm trả ly (Eco-Map).
+
+
+* **Gamification:**
+* 
+**Cây xanh ảo:** Cây lớn lên khi trả đúng hạn, héo khi quá hạn.
+
+
+* 
+**Bảng xếp hạng (Leaderboard):** Thi đua sống xanh giữa các Khoa/Lớp trong trường.
+
+
+* 
+**Social Feed (Green Feed):** Nơi đăng ảnh check-in với ly mượn để nhận điểm thưởng.
+
+
+
+
+
+### 3.2. Phân hệ Admin Dashboard (Giao diện Web)
+
+* **Quản lý mã QR:** Hệ thống sinh mã UUID tự động cho lô ly mới. Xuất file in định dạng URL: `sipsmart.vn/borrow?cup_id=...`
+* 
+**Điều phối Kho:** Cảnh báo khi quán A sắp hết ly hoặc quán B dư thừa để Admin điều phối hậu cần.
+
+
+* **Phân tích tác động (Analytics):** Dashboard thời gian thực về số ly nhựa đã cắt giảm, tổng lượng  tiết kiệm được.
+* **Quản lý rủi ro:** Hệ thống tự động liệt "Danh sách đen" (Blacklist) các tài khoản làm hỏng/mất ly quá 3 lần.
+
+---
+
+## 4. QUY TRÌNH XỬ LÝ KỸ THUẬT (LOGIC WORKFLOW)
+
+| Giai đoạn | Logic xử lý Backend |
+| --- | --- |
+| **Mượn ly** | Kiểm tra ví User  Trừ cọc  Chuyển Cup sang `In_use`  Ghi Transaction `Ongoing`  Pop-up chúc mừng.
+
+ |
+| **Nhắc nhở** | Cron Job quét Transaction `Ongoing` mỗi giờ  So sánh `due_time`  Push thông báo nhắc nhở để khắc phục tính hay quên.
+
+ |
+| **Trả ly** | Xác thực QR Cup  Chuyển Cup sang `Cleaning`  Hoàn tiền cọc  Cộng `Green Points`  Cập nhật tồn kho tại quán nhận.
+
+ |
+| **Vệ sinh** | Nhân viên quán xác nhận đã tiệt trùng qua máy  Chuyển Cup sang `Available` để tiếp tục phục vụ khách mới.
+
+ |
+
+---
+
+## 5. UI/UX GUIDELINES CHO GEN Z
+
+* **Màu sắc:** Xanh mầm (Greenery), Trắng tinh khôi, Đen nhám hiện đại.
+* **Trải nghiệm:** Phải thực hiện mượn/trả trong tối đa 3 lần chạm.
+* **Tương tác:** Tích hợp **AR (Thực tế ảo)** để khi quét ly, sinh viên thấy các sinh vật biển (rùa, cá) "cảm ơn" ngay trên màn hình.
+
+---
+
+**Yêu cầu đầu ra:**
+
+1. Thiết kế wireframe cho 3 màn hình chính của User: Home, QR Scanner, Wallet.
+2. Xây dựng tài liệu API chi tiết cho luồng Mượn - Trả.
+3. Đề xuất lộ trình tích hợp hệ thống vào Canteen trường đại học.
+
+
+
+Would you like me to **soạn thảo chi tiết các thông điệp thông báo (Push Messages)** mang phong cách Gen Z để tối ưu hóa tỷ lệ trả ly cho ứng dụng này không?

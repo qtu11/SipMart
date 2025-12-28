@@ -1,0 +1,120 @@
+import { createCupAdmin, getCupAdmin } from './admin-cups';
+import { createCup, getCup } from './cups';
+import { isAdminSDKAvailable } from './admin-config';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
+import type { Cup } from '../types';
+
+/**
+ * Create cup with fallback mechanism
+ * Tries Admin SDK first, then Supabase, then client SDK
+ */
+export async function createCupWithFallback(
+  cupId: string,
+  material: 'pp_plastic' | 'bamboo_fiber'
+): Promise<Cup> {
+  // Try Admin SDK first
+  if (isAdminSDKAvailable()) {
+    try {
+      return await createCupAdmin(cupId, material);
+    } catch (error: any) {
+      console.warn('⚠️ Admin SDK failed, trying Supabase:', error.message);
+    }
+  }
+
+  // Try Supabase (has service role, bypasses RLS)
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch {
+    supabase = null;
+  }
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('cups')
+        .insert({
+          cup_id: cupId,
+          material,
+          status: 'available',
+          total_uses: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        cupId: data.cup_id,
+        material: data.material as 'pp_plastic' | 'bamboo_fiber',
+        status: data.status as 'available',
+        createdAt: new Date(data.created_at),
+        totalUses: data.total_uses || 0,
+      };
+    } catch (error: any) {
+      console.warn('⚠️ Supabase failed, trying client SDK:', error.message);
+    }
+  }
+
+  // Fallback to client SDK (requires authentication)
+  // This will work if user is authenticated
+  try {
+    return await createCup(cupId, material);
+  } catch (error: any) {
+    throw new Error(
+      `Failed to create cup: ${error.message}. ` +
+      `Please ensure Firebase Admin SDK is configured or user is authenticated.`
+    );
+  }
+}
+
+/**
+ * Get cup with fallback mechanism
+ */
+export async function getCupWithFallback(cupId: string): Promise<Cup | null> {
+  // Try Admin SDK first
+  if (isAdminSDKAvailable()) {
+    try {
+      const cup = await getCupAdmin(cupId);
+      if (cup) return cup;
+    } catch (error: any) {
+      console.warn('⚠️ Admin SDK failed, trying Supabase:', error.message);
+    }
+  }
+
+  // Try Supabase
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch {
+    supabase = null;
+  }
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('cups')
+        .select('*')
+        .eq('cup_id', cupId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+      if (!data) return null;
+
+      return {
+        cupId: data.cup_id,
+        material: data.material as 'pp_plastic' | 'bamboo_fiber',
+        status: data.status as 'available' | 'in_use' | 'cleaning' | 'lost',
+        createdAt: new Date(data.created_at),
+        totalUses: data.total_uses || 0,
+        lastCleanedAt: data.last_cleaned_at ? new Date(data.last_cleaned_at) : undefined,
+        currentUserId: data.current_user_id || undefined,
+        currentTransactionId: data.current_transaction_id || undefined,
+      };
+    } catch (error: any) {
+      console.warn('⚠️ Supabase failed, trying client SDK:', error.message);
+    }
+  }
+
+  // Fallback to client SDK
+  return await getCup(cupId);
+}
+

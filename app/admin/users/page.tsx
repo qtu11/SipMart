@@ -1,0 +1,384 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Users, Search, Ban, CheckCircle, Mail, Wallet, Award, Calendar } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
+import { checkIsAdmin } from '@/lib/supabase/admin';
+import toast from 'react-hot-toast';
+import Link from 'next/link';
+
+interface User {
+  userId: string;
+  email: string;
+  displayName?: string;
+  walletBalance: number;
+  greenPoints: number;
+  rankLevel: string;
+  totalCupsSaved: number;
+  totalPlasticReduced: number;
+  isBlacklisted: boolean;
+  blacklistReason?: string;
+  blacklistCount: number;
+  createdAt: Date;
+  lastActivity: Date;
+}
+
+export default function UsersManagementPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const router = useRouter();
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      // Use admin credentials from env
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+      
+      if (!adminKey || !adminPassword) {
+        throw new Error('Admin credentials not configured');
+      }
+
+      const email = adminKey.split(',')[0].trim();
+      const res = await fetch('/api/admin/users', {
+        headers: {
+          'x-admin-email': email,
+          'x-admin-password': adminPassword,
+        },
+      });
+      
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Không thể tải danh sách users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Check admin access
+    const unsubscribe = onAuthChange(async (user) => {
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const userId = (user as any).id || (user as any).user_id || (user as any).uid;
+      const isAdmin = await checkIsAdmin(userId, user.email || '');
+      if (!isAdmin) {
+        toast.error('Bạn không có quyền truy cập trang này');
+        router.push('/');
+        return;
+      }
+
+      setCurrentUser(user);
+      setAuthorized(true);
+      fetchUsers();
+    });
+
+    return () => unsubscribe();
+  }, [router, fetchUsers]);
+
+  const handleBlacklist = async (userId: string, reason: string) => {
+    try {
+      // Use admin credentials from env
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+      const email = adminKey.split(',')[0].trim();
+
+      const res = await fetch('/api/admin/users/blacklist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': email,
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ userId, reason }),
+      });
+
+      if (!res.ok) throw new Error('Failed to blacklist user');
+      
+      toast.success('Đã blacklist user');
+      fetchUsers();
+    } catch (error) {
+      console.error('Blacklist error:', error);
+      toast.error('Không thể blacklist user');
+    }
+  };
+
+  const handleUnblacklist = async (userId: string) => {
+    try {
+      // Use admin credentials from env
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+      const email = adminKey.split(',')[0].trim();
+
+      const res = await fetch('/api/admin/users/unblacklist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': email,
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to unblacklist user');
+      
+      toast.success('Đã gỡ blacklist user');
+      fetchUsers();
+    } catch (error) {
+      console.error('Unblacklist error:', error);
+      toast.error('Không thể gỡ blacklist user');
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.userId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const rankEmojis: Record<string, string> = {
+    seed: '🌱',
+    sprout: '🌿',
+    sapling: '🌳',
+    tree: '🌲',
+    forest: '🌍',
+  };
+
+  if (loading || !authorized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
+        <div className="text-primary-600">Đang kiểm tra quyền truy cập...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
+      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div>
+            <Link href="/admin" className="text-primary-600 hover:underline mb-2 inline-block">
+              ← Quay lại Dashboard
+            </Link>
+            <h1 className="text-xl font-semibold text-dark-800">Quản lý Người dùng</h1>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm theo email, tên, hoặc ID..."
+            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-primary-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-4 shadow-soft"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-primary-500" />
+              <span className="text-sm text-dark-500">Tổng users</span>
+            </div>
+            <div className="text-2xl font-bold text-primary-600">{users.length}</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-2xl p-4 shadow-soft"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Ban className="w-5 h-5 text-red-500" />
+              <span className="text-sm text-dark-500">Blacklisted</span>
+            </div>
+            <div className="text-2xl font-bold text-red-600">
+              {users.filter(u => u.isBlacklisted).length}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl p-4 shadow-soft"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Award className="w-5 h-5 text-primary-500" />
+              <span className="text-sm text-dark-500">Tổng điểm</span>
+            </div>
+            <div className="text-2xl font-bold text-primary-600">
+              {users.reduce((sum, u) => sum + u.greenPoints, 0).toLocaleString('vi-VN')}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-2xl p-4 shadow-soft"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet className="w-5 h-5 text-primary-500" />
+              <span className="text-sm text-dark-500">Tổng ví</span>
+            </div>
+            <div className="text-2xl font-bold text-primary-600">
+              {users.reduce((sum, u) => sum + u.walletBalance, 0).toLocaleString('vi-VN')}đ
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Users List */}
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-dark-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-primary-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">User</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Ví</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Điểm</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Hạng</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Ly cứu</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Trạng thái</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-dark-800">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-100">
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-dark-500">
+                      {searchQuery ? 'Không tìm thấy user nào' : 'Chưa có user nào'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user, index) => (
+                    <motion.tr
+                      key={user.userId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`hover:bg-primary-50/50 transition ${
+                        user.isBlacklisted ? 'bg-red-50/50' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span className="text-primary-600 font-bold text-sm">
+                              {(user.displayName || user.email).charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-dark-800 text-sm">
+                              {user.displayName || 'Chưa có tên'}
+                            </p>
+                            <p className="text-xs text-dark-400">{user.userId.substring(0, 8)}...</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="w-4 h-4 text-dark-400" />
+                          <span className="text-dark-700">{user.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Wallet className="w-4 h-4 text-primary-500" />
+                          <span className="font-semibold text-primary-600">
+                            {user.walletBalance.toLocaleString('vi-VN')}đ
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Award className="w-4 h-4 text-yellow-500" />
+                          <span className="font-semibold text-dark-800">
+                            {user.greenPoints.toLocaleString('vi-VN')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-lg">{rankEmojis[user.rankLevel] || '🌱'}</span>
+                        <span className="ml-2 text-sm text-dark-600 capitalize">{user.rankLevel}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-primary-600">
+                          {user.totalCupsSaved}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.isBlacklisted ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">
+                            <Ban className="w-3 h-3" />
+                            Blacklisted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-semibold">
+                            <CheckCircle className="w-3 h-3" />
+                            Active
+                          </span>
+                        )}
+                        {user.blacklistCount > 0 && (
+                          <p className="text-xs text-dark-400 mt-1">
+                            {user.blacklistCount} lần
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {user.isBlacklisted ? (
+                            <button
+                              onClick={() => handleUnblacklist(user.userId)}
+                              className="px-3 py-1 bg-primary-500 text-white rounded-lg text-xs font-semibold hover:bg-primary-600 transition"
+                            >
+                              Gỡ Blacklist
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const reason = prompt('Lý do blacklist:');
+                                if (reason) {
+                                  handleBlacklist(user.userId, reason);
+                                }
+                              }}
+                              className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600 transition"
+                            >
+                              Blacklist
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
