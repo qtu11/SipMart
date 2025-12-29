@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -20,6 +20,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Check for OAuth error in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error === 'oauth_failed') {
+      toast.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
+      // Clean URL
+      router.replace('/auth/login');
+    } else if (error === 'no_user') {
+      toast.error('Không thể tạo tài khoản. Vui lòng thử lại.');
+      router.replace('/auth/login');
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,14 +164,30 @@ export default function LoginPage() {
         return;
       }
 
-      await signInWithGoogle();
-      // Google OAuth sẽ redirect, không cần xử lý ở đây
-      toast.success('Đang chuyển hướng đến Google...');
+      const result = await signInWithGoogle();
+      
+      // Google OAuth sẽ redirect, nhưng check nếu có lỗi ngay
+      if (result?.url) {
+        // Redirect URL được trả về, sẽ tự động redirect
+        toast.success('Đang chuyển hướng đến Google...');
+        // Không set loading = false vì sẽ redirect
+      } else {
+        // Nếu không có redirect URL, có thể có lỗi
+        setLoading(false);
+        toast.error('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
+      }
     } catch (error: any) {
-      console.error('Google login error:', error);
-      toast.error('Đăng nhập thất bại. Vui lòng thử lại.');
-    } finally {
+      console.error('❌ Google login error:', error);
       setLoading(false);
+      
+      // Error messages cụ thể hơn
+      if (error.message?.includes('popup')) {
+        toast.error('Popup bị chặn. Vui lòng cho phép popup và thử lại.');
+      } else if (error.message?.includes('redirect')) {
+        toast.error('Không thể redirect đến Google. Vui lòng kiểm tra cấu hình.');
+      } else {
+        toast.error(`Đăng nhập Google thất bại: ${error.message || 'Vui lòng thử lại'}`);
+      }
     }
   };
 

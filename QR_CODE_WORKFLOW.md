@@ -136,3 +136,4 @@ Hệ thống sử dụng fallback để đảm bảo hoạt động:
 - Regenerate QR code
 - Kiểm tra QR code data format
 
+

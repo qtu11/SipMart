@@ -105,12 +105,19 @@ export default function RegisterPage() {
         // Không block đăng ký nếu email fail
       }
       
-      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.');
-      
-      // Delay một chút để user thấy message
-      setTimeout(() => {
-        router.push('/');
-      }, 1500);
+      // Check nếu email confirmation được bật
+      // Nếu user chưa confirm, Supabase sẽ trả về user nhưng email_confirmed_at = null
+      if (user.email_confirmed_at) {
+        toast.success('Đăng ký thành công!');
+        setTimeout(() => {
+          router.push('/');
+        }, 1000);
+      } else {
+        toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.');
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 2000);
+      }
     } catch (error: any) {
       console.error('Register error:', error);
       if (error.code === 'auth/email-already-in-use') {
