@@ -32,10 +32,9 @@ export async function GET(request: NextRequest) {
         studentId: (user as any).studentId,
       },
     });
-  } catch (error: any) {
-    console.error('Get user info error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

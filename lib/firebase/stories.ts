@@ -69,9 +69,7 @@ export async function createStory(
     });
 
     return storyId;
-  } catch (error) {
-    console.error('Error creating story:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -149,9 +147,7 @@ export async function getStories(userId: string, friendIds: string[]): Promise<S
 
     // Sắp xếp lại theo thời gian
     return stories.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  } catch (error) {
-    console.error('Error getting stories:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -187,9 +183,7 @@ export async function getUserStories(userId: string): Promise<Story[]> {
         likes: data.likes || [],
       } as Story;
     });
-  } catch (error) {
-    console.error('Error getting user stories:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -211,9 +205,7 @@ export async function viewStory(storyId: string, userId: string): Promise<void> 
         views: [...views, userId],
       }, { merge: true });
     }
-  } catch (error) {
-    console.error('Error viewing story:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -242,9 +234,7 @@ export async function toggleStoryLike(storyId: string, userId: string): Promise<
       }, { merge: true });
       return true;
     }
-  } catch (error) {
-    console.error('Error toggling story like:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -264,9 +254,7 @@ export async function deleteStory(storyId: string, userId: string): Promise<void
     }
 
     await deleteDoc(storyRef);
-  } catch (error) {
-    console.error('Error deleting story:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -306,9 +294,7 @@ export async function createAchievementStory(
       ...achievementData,
       displayText,
     });
-  } catch (error) {
-    console.error('Error creating achievement story:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 

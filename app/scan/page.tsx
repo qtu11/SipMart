@@ -6,7 +6,7 @@ import { QrCode, X, CheckCircle, AlertCircle, Camera, Keyboard, Image as ImageIc
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Html5Qrcode } from 'html5-qrcode';
-import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
+import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { User as FirebaseUser } from 'firebase/auth';
 
 export default function ScanPage() {
@@ -28,26 +28,29 @@ export default function ScanPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Lấy user hiện tại
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUserId((currentUser as any).id || (currentUser as any).user_id);
-    } else {
-      const unsubscribe = onAuthChange((user: FirebaseUser | null) => {
-        if (user) {
-          setUserId((user as any).id || (user as any).user_id);
-        } else {
-          router.push('/auth/login');
-        }
-      });
-      return () => unsubscribe();
-    }
+    const checkUser = async () => {
+      // Lấy user hiện tại
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUserId(currentUser.id);
+      } else {
+        const unsubscribe = onAuthChange((user: any | null) => {
+          if (user) {
+            setUserId(user.id);
+          } else {
+            router.push('/auth/login');
+          }
+        });
+        return () => unsubscribe();
+      }
+    };
+    checkUser();
   }, [router]);
 
   const startScanning = async () => {
     try {
       setCameraError(null);
-      
+
       // Kiểm tra xem có hỗ trợ camera không
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Trình duyệt không hỗ trợ camera');
@@ -75,17 +78,18 @@ export default function ScanPage() {
       );
 
       setScanning(true);
-    } catch (error: any) {
-      console.error('Camera error:', error);
-      setCameraError(error.message || 'Không thể truy cập camera');
-      
+    } catch (error: unknown) {
+      const err = error as Error;
+      // Removed console.error
+      setCameraError(err.message || 'Không thể truy cập camera');
+
       // Hiển thị thông báo lỗi chi tiết
-      if (error.name === 'NotAllowedError') {
+      if (err.name === 'NotAllowedError') {
         toast.error('Vui lòng cấp quyền truy cập camera');
-      } else if (error.name === 'NotFoundError') {
+      } else if (err.name === 'NotFoundError') {
         toast.error('Không tìm thấy camera. Vui lòng nhập mã QR thủ công.');
         setShowManualInput(true);
-      } else if (error.name === 'NotReadableError') {
+      } else if (err.name === 'NotReadableError') {
         toast.error('Camera đang được sử dụng bởi ứng dụng khác');
       } else {
         toast.error('Không thể truy cập camera. Vui lòng thử lại hoặc nhập mã thủ công.');
@@ -101,8 +105,9 @@ export default function ScanPage() {
         await scannerRef.current.clear();
       }
       scannerRef.current = null;
-    } catch (error) {
-      console.error('Error stopping scanner:', error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      // Removed console.error
     }
     setScanning(false);
     setResult(null);
@@ -112,7 +117,7 @@ export default function ScanPage() {
   const handleQRScan = async (qrData: string) => {
     // Tránh xử lý nhiều lần
     if (processing) return;
-    
+
     setProcessing(true);
     try {
       // Dừng quét để tránh quét nhiều lần
@@ -146,9 +151,10 @@ export default function ScanPage() {
       } else if (data.action === 'return') {
         await handleReturn(cupId);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi quét QR');
-      console.error(error);
+      // Log removed
     } finally {
       setProcessing(false);
     }
@@ -178,18 +184,19 @@ export default function ScanPage() {
       // Tạo instance với ID tạm thời (không cần mount vào DOM cho file scan)
       const tempId = `temp-qr-scanner-${Date.now()}`;
       const html5QrCode = new Html5Qrcode(tempId);
-      
+
       // Decode từ file (true = verbose logging)
       const decodedText = await html5QrCode.scanFile(file, true);
-      
+
       if (decodedText) {
         await handleQRScan(decodedText);
       } else {
         toast.error('Không tìm thấy mã QR trong ảnh. Vui lòng thử lại với ảnh khác.');
       }
-    } catch (error: any) {
-      console.error('Error scanning image:', error);
-      const errorMessage = error.message || '';
+    } catch (error: unknown) {
+      const err = error as Error;
+      // Log removed
+      const errorMessage = err.message || '';
       if (errorMessage.includes('No QR code found') || errorMessage.includes('QR code parse error')) {
         toast.error('Không tìm thấy mã QR trong ảnh. Vui lòng thử lại với ảnh khác hoặc chụp lại ảnh rõ hơn.');
       } else {
@@ -232,7 +239,8 @@ export default function ScanPage() {
       } else {
         toast.error(data.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi mượn ly');
     }
   };
@@ -260,7 +268,8 @@ export default function ScanPage() {
       } else {
         toast.error(data.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi trả ly');
     }
   };
@@ -275,7 +284,7 @@ export default function ScanPage() {
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
+        scannerRef.current.stop().catch(() => { });
       }
     };
   }, []);

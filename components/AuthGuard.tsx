@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
+import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 
 interface AuthGuardProps {
   children: React.ReactNode;

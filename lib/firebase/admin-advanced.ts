@@ -53,9 +53,7 @@ export async function createCampaign(data: Omit<Campaign, 'campaignId' | 'create
     });
 
     return { success: true, campaignId: campaign.campaignId };
-  } catch (error) {
-    console.error('Error creating campaign:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -79,9 +77,7 @@ export async function getActiveCampaigns(): Promise<Campaign[]> {
           : data.rewardValue,
       } as Campaign;
     });
-  } catch (error) {
-    console.error('Error getting active campaigns:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -96,9 +92,7 @@ export async function updateCampaign(campaignId: string, data: Partial<Campaign>
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {
-    console.error('Error updating campaign:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -107,9 +101,7 @@ export async function deactivateCampaign(campaignId: string) {
     const docRef = doc(db, COLLECTIONS.CAMPAIGNS, campaignId);
     await updateDoc(docRef, { isActive: false });
     return { success: true };
-  } catch (error) {
-    console.error('Error deactivating campaign:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -164,9 +156,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       enableRewardsStore: settings.enableRewardsStore !== undefined ? settings.enableRewardsStore : true,
       maintenanceMode: settings.maintenanceMode || false,
     };
-  } catch (error) {
-    console.error('Error getting system settings:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -195,9 +185,7 @@ export async function updateSystemSetting(
     }, { merge: true });
 
     return { success: true };
-  } catch (error) {
-    console.error('Error updating system setting:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -220,9 +208,7 @@ export async function createIncident(data: Omit<Incident, 'incidentId' | 'create
     });
 
     return { success: true, incidentId: incident.incidentId };
-  } catch (error) {
-    console.error('Error creating incident:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -246,9 +232,7 @@ export async function getIncidents(status?: Incident['status']): Promise<Inciden
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Incident);
-  } catch (error) {
-    console.error('Error getting incidents:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -274,9 +258,7 @@ export async function updateIncident(
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {
-    console.error('Error updating incident:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -299,9 +281,7 @@ export async function setupAutoReport(data: Omit<AutoReport, 'reportId' | 'creat
     });
 
     return { success: true, reportId: report.reportId };
-  } catch (error) {
-    console.error('Error setting up auto report:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -322,9 +302,7 @@ export async function getAutoReports(): Promise<AutoReport[]> {
         config: data.config ? JSON.parse(data.config) : null,
       } as AutoReport;
     });
-  } catch (error) {
-    console.error('Error getting auto reports:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -349,9 +327,7 @@ export async function createAdminRole(data: Omit<AdminRoleConfig, 'id' | 'create
     });
 
     return { success: true, roleId: role.id };
-  } catch (error) {
-    console.error('Error creating admin role:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -368,9 +344,7 @@ export async function getAdminRoles(): Promise<AdminRoleConfig[]> {
         updatedAt: data.updatedAt?.toDate() || new Date(),
       } as AdminRoleConfig;
     });
-  } catch (error) {
-    console.error('Error getting admin roles:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -412,9 +386,7 @@ export async function getInventoryAlerts(): Promise<InventoryAlert[]> {
     });
 
     return alerts;
-  } catch (error) {
-    console.error('Error getting inventory alerts:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -435,9 +407,7 @@ export async function createInventoryTransfer(
     });
 
     return { success: true, transferId: transfer.transferId };
-  } catch (error) {
-    console.error('Error creating inventory transfer:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -491,9 +461,7 @@ export async function updateInventoryTransfer(
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {
-    console.error('Error updating inventory transfer:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -519,9 +487,7 @@ export async function createBulkOperation(
     });
 
     return { success: true, operationId: operation.operationId };
-  } catch (error) {
-    console.error('Error creating bulk operation:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -543,9 +509,7 @@ export async function updateBulkOperation(
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {
-    console.error('Error updating bulk operation:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -586,9 +550,7 @@ export async function generateBulkQRCodes(count: number, material: 'pp_plastic' 
       failCount,
       cupIds,
     };
-  } catch (error) {
-    console.error('Error generating bulk QR codes:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 

@@ -19,16 +19,12 @@ const ADMIN_EMAILS = ['qtusadmin@gmail.com', 'qtusdev@gmail.com'];
 const ADMIN_PASSWORD = 'qtusdev';
 
 // Debug: Log admin emails
-console.log('📋 Admin emails configured:', ADMIN_EMAILS);
-
 /**
  * Kiểm tra xem email có phải admin không
  */
 export function isAdminEmail(email: string): boolean {
   const normalizedEmail = email.toLowerCase().trim();
-  const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
-  console.log('🔐 Checking admin email:', normalizedEmail, '→', isAdmin ? '✅ Admin' : '❌ Not admin');
-  return isAdmin;
+  const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);  return isAdmin;
 }
 
 /**
@@ -45,9 +41,7 @@ export async function getAdmin(userId: string): Promise<Admin | null> {
       ...data,
       createdAt: data.createdAt?.toDate() || new Date(),
     } as Admin;
-  } catch (error) {
-    console.error('Error getting admin:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 

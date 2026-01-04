@@ -44,10 +44,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/payment/topup:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

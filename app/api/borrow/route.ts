@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runTransaction, doc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { getCup } from '@/lib/firebase/cups';
-import { getUser } from '@/lib/supabase/users';
-import { getStore } from '@/lib/firebase/stores';
+import { getUser, updateWallet } from '@/lib/supabase/users';
+import { getCup, updateCupStatus, incrementCupUses } from '@/lib/supabase/cups';
+import { getStore, borrowCupFromStore } from '@/lib/supabase/stores';
+import { createTransaction } from '@/lib/supabase/transactions';
 
 const DEPOSIT_AMOUNT = parseInt(process.env.NEXT_PUBLIC_DEPOSIT_AMOUNT || '20000');
 const BORROW_DURATION_HOURS = parseInt(process.env.NEXT_PUBLIC_BORROW_DURATION_HOURS || '24');
@@ -46,6 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cup not found' }, { status: 404 });
     }
 
+    // CRITICAL: Check cup status - this prevents race conditions
+    // If another request is processing this cup, it will fail here
     if (cup.status !== 'available') {
       return NextResponse.json(
         { error: `Cup is ${cup.status}`, currentStatus: cup.status },
@@ -59,99 +60,70 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
     }
 
-    if (store.cupInventory.available < 1) {
+    if (store.cupAvailable < 1) {
       return NextResponse.json(
         { error: 'Store has no available cups' },
         { status: 400 }
       );
     }
 
-    // Thực hiện transaction atomic
-    const dueTime = new Date();
-    dueTime.setHours(dueTime.getHours() + BORROW_DURATION_HOURS);
-    
-    // Cập nhật wallet balance trong Supabase (trước khi tạo Firestore transaction)
-    const { updateWallet } = await import('@/lib/supabase/users');
-    await updateWallet(userId, -DEPOSIT_AMOUNT);
-    
-    const result = await runTransaction(db, async (transaction: any) => {
-
-      // Kiểm tra lại cup status
-      const cupRef = doc(db, 'cups', cupId);
-      const cupSnap = await transaction.get(cupRef);
-      if (!cupSnap.exists() || cupSnap.data().status !== 'available') {
-        throw new Error('Cup not available');
-      }
-
-      // Tạo transaction ID
-      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-
-      // Cập nhật cup
-      transaction.update(cupRef, {
-        status: 'in_use',
-        currentUserId: userId,
-        currentTransactionId: transactionId,
-        lastActivity: Timestamp.now(),
-      });
-
-      // Tạo transaction record
-      const transactionRef = doc(db, 'transactions', transactionId);
-      transaction.set(transactionRef, {
-        userId,
-        cupId,
-        borrowStoreId: storeId,
-        borrowTime: Timestamp.now(),
-        dueTime: Timestamp.fromDate(dueTime),
-        status: 'ongoing',
-        depositAmount: DEPOSIT_AMOUNT,
-        isOverdue: false,
-      });
-
-      // Cập nhật inventory
-      const storeRef = doc(db, 'stores', storeId);
-      transaction.update(storeRef, {
-        'cupInventory.available': store.cupInventory.available - 1,
-        'cupInventory.inUse': store.cupInventory.inUse + 1,
-      });
-
-      return { transactionId, dueTime };
+    // Tạo transaction
+    const transaction = await createTransaction({
+      userId,
+      cupId,
+      borrowStoreId: storeId,
+      depositAmount: DEPOSIT_AMOUNT,
+      durationHours: BORROW_DURATION_HOURS,
     });
 
+    // Trừ tiền cọc
+    await updateWallet(userId, -DEPOSIT_AMOUNT);
+
+    // ATOMIC: Cập nhật cup status using database RPC (prevents all race conditions)
+    // This locks the cup row and ensures only one user can borrow it
+    const { borrowCupAtomic } = await import('@/lib/supabase/cups');
+    const borrowResult = await borrowCupAtomic(cupId, userId, transaction.transactionId);
+
+    if (!borrowResult.success) {
+      // Rollback: refund user and cancel transaction
+      await updateWallet(userId, DEPOSIT_AMOUNT);
+      // Transaction will be cleaned up by cron job or can be cancelled here
+      throw new Error(borrowResult.message);
+    }
+
+    // Cập nhật inventory
+    await borrowCupFromStore(storeId);
+
     // Gửi email thông báo mượn ly (async, không block response)
-    // Note: user.email từ Firestore, nếu không có thì skip
-    const userEmail = user.email || null;
-    if (userEmail) {
-      // Gửi email trong background, không block response
+    if (user.email) {
       fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/send-borrow-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: userEmail,
+          email: user.email,
           displayName: user.displayName || 'Người dùng',
           cupId,
-          transactionId: result.transactionId,
-          dueTime: result.dueTime.toISOString(),
+          transactionId: transaction.transactionId,
+          dueTime: transaction.dueTime.toISOString(),
           storeName: store.name,
         }),
-      }).catch(err => {
-        console.error('Error sending borrow email:', err);
-        // Không throw error để không ảnh hưởng đến flow chính
+      }).catch(() => {
+        // Email error - silent fail, don't block borrow flow
       });
     }
 
     return NextResponse.json({
       success: true,
       message: '🌟 Mượn ly thành công! Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!',
-      transactionId: result.transactionId,
-      dueTime: result.dueTime,
+      transactionId: transaction.transactionId,
+      dueTime: transaction.dueTime,
       depositAmount: DEPOSIT_AMOUNT,
     });
-  } catch (error: any) {
-    console.error('Borrow error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

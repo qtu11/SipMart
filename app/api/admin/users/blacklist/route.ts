@@ -31,12 +31,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'User blacklisted successfully',
     });
-  } catch (error: any) {
-    console.error('Blacklist user error:', error);
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Internal server error',
+        error: err.message || 'Internal server error',
       },
       { status: 500 }
     );

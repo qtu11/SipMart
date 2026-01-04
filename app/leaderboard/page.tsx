@@ -27,7 +27,8 @@ export default function LeaderboardPage() {
       const res = await fetch('/api/leaderboard?top=100');
       const data = await res.json();
       setLeaderboard(data.leaderboard || []);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching leaderboard:', error);
     } finally {
       setLoading(false);

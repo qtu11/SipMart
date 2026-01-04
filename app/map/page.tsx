@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Navigation, Search, X } from 'lucide-react';
 import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
-import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
+import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -25,11 +25,10 @@ const mapContainerStyle = {
   height: '100%',
 };
 
-// Default center: 141-145 Điện Biên Phủ, Phường Gia Định, TP.HCM
-// Coordinates: ~10.803, 106.695 (verified for Điện Biên Phủ, Gia Định)
+// Default center: UEF - 141 Điện Biên Phủ, Phường 15, Bình Thạnh, TP.HCM
 const defaultCenter = {
-  lat: 10.803,
-  lng: 106.695, // 141-145 Điện Biên Phủ, Phường Gia Định, TP.HCM
+  lat: 10.796317,
+  lng: 106.702580,
 };
 
 export default function MapPage() {
@@ -45,7 +44,7 @@ export default function MapPage() {
     try {
       const res = await fetch('/api/stores');
       const data = await res.json();
-      
+
       if (userLocation) {
         // Calculate distance
         const storesWithDistance = (data.stores || []).map((store: Store) => {
@@ -57,14 +56,15 @@ export default function MapPage() {
           );
           return { ...store, distance };
         });
-        
+
         // Sort by distance
         storesWithDistance.sort((a: Store, b: Store) => (a.distance || 0) - (b.distance || 0));
         setStores(storesWithDistance);
       } else {
         setStores(data.stores || []);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching stores:', error);
       toast.error('Không thể tải danh sách cửa hàng');
     } finally {
@@ -72,12 +72,21 @@ export default function MapPage() {
     }
   }, [userLocation]);
 
+  // Initial Setup: Auth & Geolocation (Run ONCE)
   useEffect(() => {
-    const unsubscribe = onAuthChange((user) => {
-      if (!user) {
-        router.push('/auth/login');
+    let unsubscribe: (() => void) | undefined;
+
+    const checkAuth = async () => {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        unsubscribe = onAuthChange((user) => {
+          if (!user) {
+            router.push('/auth/login');
+          }
+        });
       }
-    });
+    };
+    checkAuth();
 
     // Get user location
     if (navigator.geolocation) {
@@ -91,6 +100,7 @@ export default function MapPage() {
           setMapCenter(location);
         },
         () => {
+          console.log('Using default location');
           setUserLocation(defaultCenter);
           setMapCenter(defaultCenter);
         }
@@ -100,11 +110,15 @@ export default function MapPage() {
       setMapCenter(defaultCenter);
     }
 
-    // Fetch stores
-    fetchStores();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [router]); // Removed fetchStores to avoid loop
 
-    return () => unsubscribe();
-  }, [router, fetchStores]);
+  // Fetch Data Effect (Run when fetchStores changes, i.e., when userLocation changes)
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Radius of the Earth in km
@@ -193,7 +207,7 @@ export default function MapPage() {
               }}
             >
               {/* User Location Marker */}
-              {userLocation && typeof window !== 'undefined' && window.google && (
+              {userLocation && typeof window !== 'undefined' && window.google?.maps?.SymbolPath && (
                 <Marker
                   position={userLocation}
                   icon={{
@@ -271,7 +285,7 @@ export default function MapPage() {
 
         {/* Stores List (Sidebar) */}
         {filteredStores.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 max-h-[40vh] overflow-y-auto bg-white/95 backdrop-blur-md border-t border-primary-100 shadow-xl">
+          <div className="absolute bottom-0 left-0 right-0 max-h-[40vh] overflow-y-auto bg-white/95 backdrop-blur-md border-t border-primary-100 shadow-xl z-20">
             <div className="p-4">
               <h3 className="font-semibold text-dark-800 mb-3">
                 {filteredStores.length} cửa hàng {searchQuery && `cho "${searchQuery}"`}
@@ -284,11 +298,10 @@ export default function MapPage() {
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.02 }}
                     onClick={() => handleMarkerClick(store)}
-                    className={`bg-white rounded-xl p-4 shadow-md border-2 cursor-pointer transition-all ${
-                      selectedStore?.storeId === store.storeId
-                        ? 'border-primary-500 ring-2 ring-primary-200'
-                        : 'border-dark-100 hover:border-primary-300'
-                    }`}
+                    className={`bg-white rounded-xl p-4 shadow-md border-2 cursor-pointer transition-all ${selectedStore?.storeId === store.storeId
+                      ? 'border-primary-500 ring-2 ring-primary-200'
+                      : 'border-dark-100 hover:border-primary-300'
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
@@ -306,7 +319,7 @@ export default function MapPage() {
                       <div className="text-right ml-4">
                         <p className="text-xs text-dark-400 mb-1">Ly có sẵn</p>
                         <p className="text-lg font-bold text-primary-600">
-                          {store.cupInventory.available}/{store.cupInventory.total}
+                          {store.cupInventory?.available || 0}/{store.cupInventory?.total || 0}
                         </p>
                       </div>
                     </div>

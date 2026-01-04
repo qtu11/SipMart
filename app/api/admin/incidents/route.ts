@@ -9,10 +9,9 @@ export async function GET(request: Request) {
 
     const incidents = await getIncidents(status as any);
     return NextResponse.json({ success: true, incidents });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/incidents:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -41,10 +40,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/incidents:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -64,10 +62,9 @@ export async function PUT(request: Request) {
 
     const result = await updateIncident(incidentId, updateData, adminId);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in PUT /api/admin/incidents:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

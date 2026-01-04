@@ -58,9 +58,7 @@ export async function GET(request: NextRequest) {
             status: cup.status,
             createdAt: cup.createdAt,
           };
-        } catch (error) {
-          console.error(`Error generating QR for cup ${cupId}:`, error);
-          return null;
+        } catch (error) {          return null;
         }
       })
     );
@@ -82,10 +80,9 @@ export async function GET(request: NextRequest) {
       count: validQRCodes.length,
       qrCodes: validQRCodes,
     });
-  } catch (error: any) {
-    console.error('Export QR codes error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFriends, getFriendRequests } from '@/lib/firebase/friends';
+import { getFriends, getFriendRequests } from '@/lib/supabase/friends';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === 'requests') {
-      const requests = await getFriendRequests(userId, 'received');
+      const requests = await getFriendRequests(userId);
       return NextResponse.json({
         success: true,
         requests,
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === 'sent') {
-      const requests = await getFriendRequests(userId, 'sent');
+      const requests = await getFriendRequests(userId);
       return NextResponse.json({
         success: true,
         requests,
@@ -36,10 +36,10 @@ export async function GET(request: NextRequest) {
       success: true,
       friends,
     });
-  } catch (error: any) {
-    console.error('Get friends error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

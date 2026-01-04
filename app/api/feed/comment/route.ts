@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addCommentToPost } from '@/lib/firebase/greenFeed';
+import { addCommentToPost } from '@/lib/supabase/feed';
 import { getUser } from '@/lib/supabase/users';
 
 /**
@@ -26,25 +26,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const commentId = await addCommentToPost(
+    // Add comment (user info is fetched inside the function)
+    const comment = await addCommentToPost(
       postId,
       userId,
-      user.displayName || user.email,
-      content,
-      user.avatar
+      content
     );
 
     return NextResponse.json({
       success: true,
-      commentId,
+      comment,
       message: 'Comment added successfully',
     });
-  } catch (error: any) {
-    console.error('Add comment error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to add comment',
+        error: err.message || 'Failed to add comment',
       },
       { status: 500 }
     );

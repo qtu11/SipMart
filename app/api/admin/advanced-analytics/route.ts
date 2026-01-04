@@ -22,10 +22,9 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ success: true, analytics });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/advanced-analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

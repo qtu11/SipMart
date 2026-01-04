@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Settings, LogOut, Bell, HelpCircle, Menu, X } from 'lucide-react';
+import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store } from 'lucide-react';
 import Link from 'next/link';
-import { signOutUser } from '@/lib/firebase/auth';
+import { signOutUser } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -88,6 +88,15 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
                 >
                   <HelpCircle className="w-5 h-5 text-dark-500" />
                   <span className="text-dark-700">Trợ giúp</span>
+                </Link>
+
+                <Link
+                  href="/partner/register"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-primary-50 transition"
+                >
+                  <Store className="w-5 h-5 text-dark-500" />
+                  <span className="text-dark-700">Đăng ký Đối tác</span>
                 </Link>
 
                 <div className="border-t border-dark-100 my-2" />

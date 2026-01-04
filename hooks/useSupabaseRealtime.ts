@@ -44,7 +44,7 @@ export function useSupabaseRealtime<T>(
               filter: filter,
             },
             (payload) => {
-              console.log('Realtime change:', payload);
+              
 
               if (callback) {
                 callback(payload);

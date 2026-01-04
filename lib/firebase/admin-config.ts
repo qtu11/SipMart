@@ -45,11 +45,10 @@ export function getAdminApp(): App {
         credential: cert(serviceAccount),
         projectId,
       });
-      adminInitialized = true;
-      console.log('✅ Firebase Admin initialized with service account');
-      return adminApp;
-    } catch (error: any) {
-      console.warn('⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', error.message);
+      adminInitialized = true;      return adminApp;
+    } catch (error: unknown) {
+    const err = error as Error;
+      console.warn('⚠️ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:', err.message);
     }
   }
 
@@ -61,13 +60,10 @@ export function getAdminApp(): App {
       adminApp = initializeApp({
         projectId,
       });
-      adminInitialized = true;
-      console.log('✅ Firebase Admin initialized with Application Default Credentials');
-      return adminApp;
-    } catch (error: any) {
-      console.error('❌ Failed to initialize Firebase Admin:', error.message);
-      adminInitError = new Error(
-        `Firebase Admin initialization failed: ${error.message}. ` +
+      adminInitialized = true;      return adminApp;
+    } catch (error: unknown) {
+    const err = error as Error;      adminInitError = new Error(
+        `Firebase Admin initialization failed: ${err.message}. ` +
         `For local development, either: ` +
         `1. Set FIREBASE_SERVICE_ACCOUNT_KEY in .env.local, or ` +
         `2. Run: gcloud auth application-default login`
@@ -88,9 +84,8 @@ export function getAdminDb(): Firestore {
     const app = getAdminApp();
     adminDb = getFirestore(app);
     return adminDb;
-  } catch (error: any) {
-    console.error('❌ Failed to get Admin Firestore:', error.message);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 

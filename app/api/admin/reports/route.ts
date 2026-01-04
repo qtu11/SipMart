@@ -6,10 +6,9 @@ export async function GET(request: Request) {
   try {
     const reports = await getAutoReports();
     return NextResponse.json({ success: true, reports });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/reports:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -36,10 +35,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/reports:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

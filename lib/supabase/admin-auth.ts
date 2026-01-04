@@ -1,77 +1,71 @@
 /**
- * Admin Authentication using Environment Variables
- * Sử dụng ADMIN_KEY và ADMIN_PASSWORD từ env để xác thực admin
+ * Admin Authentication using Supabase Session  
+ * Checks if logged-in user has admin email
  */
+
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 /**
- * Kiểm tra admin credentials từ env
+ * Check if email is an admin email
+ */
+export function isAdminEmail(email: string): boolean {
+  const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY || 'qtusadmin@gmail.com';
+
+  // Split multiple admin keys (comma-separated)
+  const adminKeys = adminKey.split(',').map(k => k.trim().toLowerCase());
+  const normalizedEmail = email.toLowerCase().trim();
+
+  return adminKeys.includes(normalizedEmail);
+}
+
+/**
+ * Verify admin from Supabase session
+ * Uses the logged-in user's email to check if they're admin
+ */
+export async function verifyAdminFromRequest(request: Request): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    // Get user from request headers (authorization header)
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return false;
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+
+    if (error || !user) {
+      return false;
+    }
+
+    const email = user.email;
+    if (!email) {
+      return false;
+    }
+
+    const isAdmin = isAdminEmail(email);
+    return isAdmin;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Verify admin credentials (for login)
  */
 export function verifyAdminCredentials(email: string, password: string): boolean {
-  const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
-  const adminPassword = process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+  const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'qtusadmin@gmail.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'qtusdev';
 
   if (!adminKey || !adminPassword) {
-    console.warn('⚠️ ADMIN_KEY or ADMIN_PASSWORD not set in environment variables');
     return false;
   }
 
-  // Split multiple admin keys (comma-separated)
   const adminKeys = adminKey.split(',').map(k => k.trim().toLowerCase());
   const normalizedEmail = email.toLowerCase().trim();
 
   const emailMatch = adminKeys.includes(normalizedEmail);
   const passwordMatch = password === adminPassword;
 
-  console.log('🔐 Admin credential check:', {
-    email: normalizedEmail,
-    emailMatch,
-    passwordMatch: passwordMatch ? '✅' : '❌',
-  });
-
   return emailMatch && passwordMatch;
 }
-
-/**
- * Kiểm tra admin từ request headers (dùng cho API routes)
- */
-export function verifyAdminFromHeaders(headers: Headers): boolean {
-  const email = headers.get('x-admin-email');
-  const password = headers.get('x-admin-password');
-
-  if (!email || !password) {
-    return false;
-  }
-
-  return verifyAdminCredentials(email, password);
-}
-
-/**
- * Kiểm tra admin từ query params (fallback, ít secure hơn)
- */
-export function verifyAdminFromQuery(email?: string, password?: string): boolean {
-  if (!email || !password) {
-    return false;
-  }
-
-  return verifyAdminCredentials(email, password);
-}
-
-/**
- * Kiểm tra admin từ request (tries headers first, then query)
- */
-export function verifyAdminFromRequest(request: Request): boolean {
-  const headers = request.headers;
-  const url = new URL(request.url);
-  
-  // Try headers first (more secure)
-  if (verifyAdminFromHeaders(headers)) {
-    return true;
-  }
-
-  // Fallback to query params (less secure but compatible)
-  const email = url.searchParams.get('adminEmail');
-  const password = url.searchParams.get('adminPassword');
-  
-  return verifyAdminFromQuery(email || undefined, password || undefined);
-}
-

@@ -6,10 +6,9 @@ export async function GET(request: Request) {
   try {
     const roles = await getAdminRoles();
     return NextResponse.json({ success: true, roles });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/roles:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -34,10 +33,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/roles:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

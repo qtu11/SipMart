@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCupWithFallback } from '@/lib/firebase/cups-with-fallback';
-import { getUserCups } from '@/lib/firebase/cups';
-import { getOngoingTransactions } from '@/lib/firebase/transactions';
+import { getCup } from '@/lib/supabase/cups';
+import { getUserCups } from '@/lib/supabase/cups';
+import { getOngoingTransactions } from '@/lib/supabase/transactions';
 
 // API để quét QR và tự động nhận diện hành vi Mượn/Trả
+
+type ScanAction = 'borrow' | 'return' | 'cleaning' | 'invalid';
+
+interface ScanResponse {
+  action: ScanAction;
+  cupId: string;
+  cupStatus: string;
+  message: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -16,8 +26,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Lấy thông tin cup (sử dụng fallback)
-    const cup = await getCupWithFallback(cupId);
+    // Lấy thông tin cup từ Supabase
+    const cup = await getCup(cupId);
     if (!cup) {
       return NextResponse.json({ error: 'Cup not found' }, { status: 404 });
     }
@@ -27,41 +37,31 @@ export async function POST(request: NextRequest) {
     const isUserBorrowing = userCups.some(c => c.cupId === cupId);
 
     // Logic tự động nhận diện
+    // Logic tự động nhận diện
+    let action: ScanAction = 'invalid';
+    let message = 'Không thể thực hiện hành động này';
+
     if (cup.status === 'available' && !isUserBorrowing) {
-      // Hành vi: Mượn ly
-      return NextResponse.json({
-        action: 'borrow',
-        cupId,
-        cupStatus: cup.status,
-        message: 'Sẵn sàng mượn ly này',
-      });
+      action = 'borrow';
+      message = 'Sẵn sàng mượn ly này';
     } else if (cup.status === 'in_use' && isUserBorrowing) {
-      // Hành vi: Trả ly
-      return NextResponse.json({
-        action: 'return',
-        cupId,
-        cupStatus: cup.status,
-        message: 'Sẵn sàng trả ly này',
-      });
+      action = 'return';
+      message = 'Sẵn sàng trả ly này';
     } else if (cup.status === 'cleaning') {
-      return NextResponse.json({
-        action: 'cleaning',
-        cupId,
-        cupStatus: cup.status,
-        message: 'Ly đang được vệ sinh',
-      });
-    } else {
-      return NextResponse.json({
-        action: 'invalid',
-        cupId,
-        cupStatus: cup.status,
-        message: 'Không thể thực hiện hành động này',
-      });
+      action = 'cleaning';
+      message = 'Ly đang được vệ sinh';
     }
-  } catch (error: any) {
-    console.error('QR scan error:', error);
+
+    return NextResponse.json({
+      action,
+      cupId,
+      cupStatus: cup.status,
+      message,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

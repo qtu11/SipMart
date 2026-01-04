@@ -1,36 +1,33 @@
-// API: Transaction History
-import { NextResponse } from 'next/server';
-import { getTransactionHistory } from '@/lib/firebase/analytics';
+import { NextRequest, NextResponse } from 'next/server';
+import { getTransactionHistory } from '@/lib/supabase/transactions';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const limit = searchParams.get('limit');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const status = searchParams.get('status');
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId' },
+        { error: 'Missing userId' },
         { status: 400 }
       );
     }
 
-    const history = await getTransactionHistory(
-      userId,
-      limit ? parseInt(limit) : undefined,
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined
-    );
+    const history = await getTransactionHistory(userId, {
+      limit: limit ? parseInt(limit) : undefined,
+      status: status as any || undefined,
+    });
 
-    return NextResponse.json({ success: true, history });
-  } catch (error: any) {
-    console.error('Error in GET /api/transactions/history:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+    return NextResponse.json({
+      success: true,
+      history,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

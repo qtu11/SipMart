@@ -43,16 +43,12 @@ export async function requestNotificationPermission(): Promise<string | null> {
       serviceWorkerRegistration: await navigator.serviceWorker.ready,
     });
 
-    if (token) {
-      console.log('FCM Token:', token);
-      return token;
+    if (token) {      return token;
     } else {
       console.warn('No FCM token available');
       return null;
     }
-  } catch (error) {
-    console.error('Error getting FCM token:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -64,9 +60,7 @@ export function onForegroundMessage(callback: (payload: any) => void) {
     return () => {};
   }
 
-  return onMessage(messaging, (payload) => {
-    console.log('Foreground message received:', payload);
-    callback(payload);
+  return onMessage(messaging, (payload) => {    callback(payload);
   });
 }
 

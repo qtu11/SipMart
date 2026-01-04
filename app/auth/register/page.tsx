@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { signUpWithEmail } from '@/lib/supabase/auth';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 declare global {
   interface Window {
-    grecaptcha: any;
+    hcaptcha: any;
   }
 }
 
@@ -25,6 +26,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -46,49 +49,22 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!captchaToken) {
+      toast.error('Vui lòng xác nhận bạn không phải người máy');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Verify reCAPTCHA (skip nếu không có)
-      let recaptchaPassed = false;
-      if (window.grecaptcha) {
-        try {
-          const token = await window.grecaptcha.enterprise.execute(
-            '6Lc-jjcsAAAAANH3H3PqDGVuHvqNW-A2DvfObniN',
-            { action: 'REGISTER' }
-          );
-
-          // Verify token với backend
-          const verifyRes = await fetch('/api/auth/verify-recaptcha', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, action: 'REGISTER' }),
-          });
-
-          const verifyData = await verifyRes.json();
-          recaptchaPassed = verifyData.success && (verifyData.score >= 0.5 || verifyData.message?.includes('Development'));
-        } catch (error) {
-          console.warn('reCAPTCHA error, continuing without verification:', error);
-          recaptchaPassed = true; // Skip trong dev mode
-        }
-      } else {
-        // Development mode - skip reCAPTCHA
-        recaptchaPassed = true;
-      }
-
-      if (!recaptchaPassed) {
-        toast.error('Xác thực không thành công. Vui lòng thử lại.');
-        setLoading(false);
-        return;
-      }
-
-      // Đăng ký với Supabase
+      // Đăng ký với Supabase kèm captcha token
       const user = await signUpWithEmail(
         formData.email,
         formData.password,
         formData.displayName,
-        formData.studentId || undefined
+        formData.studentId || undefined,
+        captchaToken
       );
-      
+
       // Gửi email thông báo đăng ký
       try {
         await fetch('/api/email/send-welcome', {
@@ -104,7 +80,7 @@ export default function RegisterPage() {
         console.error('Error sending welcome email:', emailError);
         // Không block đăng ký nếu email fail
       }
-      
+
       // Check nếu email confirmation được bật
       // Nếu user chưa confirm, Supabase sẽ trả về user nhưng email_confirmed_at = null
       if (user.email_confirmed_at) {
@@ -118,44 +94,36 @@ export default function RegisterPage() {
           router.push('/auth/login');
         }, 2000);
       }
-    } catch (error: any) {
-      console.error('Register error:', error);
-      if (error.code === 'auth/email-already-in-use') {
-        toast.error('Email đã được sử dụng');
-      } else if (error.code === 'auth/weak-password') {
-        toast.error('Mật khẩu quá yếu');
-      } else if (error.code === 'auth/invalid-email') {
-        toast.error('Email không hợp lệ');
-      } else {
-        toast.error('Đăng ký thất bại. Vui lòng thử lại.');
-      }
+    } catch (error: unknown) {
+      console.error('Registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Đăng ký thất bại');
     } finally {
+      if (window.hcaptcha) window.hcaptcha.reset();
+      setCaptchaToken(null);
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center px-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md my-8"
       >
-        {/* Logo/Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary-600 mb-2">CupSipMart</h1>
-          <p className="text-dark-500">Tham gia cộng đồng sống xanh 🌱</p>
+          <p className="text-dark-500">Tham gia cộng đồng xanh 🌿</p>
         </div>
 
-        {/* Register Form */}
         <div className="bg-white rounded-2xl shadow-medium p-8">
-          <h2 className="text-2xl font-semibold text-dark-800 mb-6">Đăng ký</h2>
+          <h2 className="text-2xl font-semibold text-dark-800 mb-6">Đăng ký tài khoản</h2>
 
           <form onSubmit={handleRegister} className="space-y-4">
             {/* Display Name */}
             <div>
               <label className="block text-sm font-medium text-dark-700 mb-2">
-                Họ và tên <span className="text-red-500">*</span>
+                Họ và tên
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -164,16 +132,16 @@ export default function RegisterPage() {
                   value={formData.displayName}
                   onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                   placeholder="Nguyễn Văn A"
-                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-600 placeholder:text-dark-400"
+                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-800 placeholder:text-dark-400"
                   required
                 />
               </div>
             </div>
 
-            {/* Student ID (Optional) */}
+            {/* Student ID */}
             <div>
               <label className="block text-sm font-medium text-dark-700 mb-2">
-                Mã sinh viên
+                Mã số sinh viên (nếu có)
               </label>
               <div className="relative">
                 <GraduationCap className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -181,8 +149,8 @@ export default function RegisterPage() {
                   type="text"
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                  placeholder="SV001234"
-                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-600 placeholder:text-dark-400"
+                  placeholder="202xxxxx"
+                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-800 placeholder:text-dark-400"
                 />
               </div>
             </div>
@@ -190,7 +158,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-dark-700 mb-2">
-                Email <span className="text-red-500">*</span>
+                Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -198,8 +166,8 @@ export default function RegisterPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your.email@example.com"
-                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-600 placeholder:text-dark-400"
+                  placeholder="student@university.edu.vn"
+                  className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-800 placeholder:text-dark-400"
                   required
                 />
               </div>
@@ -208,7 +176,7 @@ export default function RegisterPage() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-dark-700 mb-2">
-                Mật khẩu <span className="text-red-500">*</span>
+                Mật khẩu
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -216,10 +184,9 @@ export default function RegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Tối thiểu 6 ký tự"
-                  className="w-full pl-12 pr-12 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-600 placeholder:text-dark-400"
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-12 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-800 placeholder:text-dark-400"
                   required
-                  minLength={6}
                 />
                 <button
                   type="button"
@@ -234,7 +201,7 @@ export default function RegisterPage() {
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-dark-700 mb-2">
-                Xác nhận mật khẩu <span className="text-red-500">*</span>
+                Xác nhận mật khẩu
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
@@ -242,8 +209,8 @@ export default function RegisterPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  placeholder="Nhập lại mật khẩu"
-                  className="w-full pl-12 pr-12 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-600 placeholder:text-dark-400"
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-12 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-dark-100 text-dark-800 placeholder:text-dark-400"
                   required
                 />
                 <button
@@ -256,11 +223,19 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* HCaptcha */}
+            <div className="flex justify-center my-4">
+              <HCaptcha
+                sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001'}
+                onVerify={(token) => setCaptchaToken(token)}
+                ref={captchaRef}
+              />
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-medium hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+              className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold shadow-medium hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 'Đang xử lý...'
@@ -274,17 +249,17 @@ export default function RegisterPage() {
           </form>
 
           {/* Login Link */}
-          <div className="mt-6 text-center">
+          < div className="mt-6 text-center" >
             <p className="text-sm text-dark-500">
               Đã có tài khoản?{' '}
               <Link href="/auth/login" className="text-primary-600 font-semibold hover:underline">
                 Đăng nhập ngay
               </Link>
             </p>
-          </div>
-        </div>
-      </motion.div>
-    </div>
+          </div >
+        </div >
+      </motion.div >
+    </div >
   );
 }
 

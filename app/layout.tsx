@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'CupSipSmart - Mượn Ly Sành Điệu, Sống Xanh Đúng Điệu',
   description: 'CupSipSmart là nền tảng tiên phong giúp thế hệ trẻ trải nghiệm lối sống không rác thải nhựa. Mượn ly dễ dàng tại mọi cửa hàng đối tác, tích điểm xanh và nhận ưu đãi độc quyền. Cùng chúng mình cứu hành tinh từ những ngụm nước nhỏ nhất!',
   keywords: 'CupSipSmart, mượn ly, bảo vệ môi trường, rác thải nhựa, Gen Z, sống bền vững',
-  
+
   // Thêm Logo Favicon
   icons: {
     icon: 'https://files.catbox.moe/9k6yfb.png',
@@ -45,10 +45,6 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <Script
-          src="https://www.google.com/recaptcha/enterprise.js?render=6Lc-jjcsAAAAANH3H3PqDGVuHvqNW-A2DvfObniN"
-          strategy="lazyOnload"
-        />
       </head>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">

@@ -95,9 +95,7 @@ export async function getAllUsers(limitCount?: number): Promise<User[]> {
         })),
       } as User;
     });
-  } catch (error) {
-    console.error('Error getting all users:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 

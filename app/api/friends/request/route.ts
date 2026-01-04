@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendFriendRequest } from '@/lib/firebase/friends';
+import { sendFriendRequest } from '@/lib/supabase/friends';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,10 +27,9 @@ export async function POST(request: NextRequest) {
       requestId,
       message: 'Friend request sent successfully',
     });
-  } catch (error: any) {
-    console.error('Send friend request error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to send friend request' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Failed to send friend request' },
       { status: 500 }
     );
   }

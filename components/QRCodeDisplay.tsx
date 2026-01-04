@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Copy, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
@@ -20,6 +20,79 @@ interface QRCodeDisplayProps {
 
 export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) {
   const [selectedQR, setSelectedQR] = useState<QRCode | null>(null);
+  const [qrCodesWithLogo, setQrCodesWithLogo] = useState<QRCode[]>(qrCodes);
+
+  // Add logo to QR codes when component mounts
+  useEffect(() => {
+    async function addLogoToQRCodes() {
+      const updatedQRCodes = await Promise.all(
+        qrCodes.map(async (qr) => {
+          // If no qrImage, can't add logo
+          if (!qr.qrImage) return qr;
+
+          try {
+            // Create canvas to overlay logo on existing QR image
+            const canvas = document.createElement('canvas');
+            const qrSize = 300;
+            const logoSize = 60;
+            canvas.width = qrSize;
+            canvas.height = qrSize;
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) return qr;
+
+            // Load existing QR image
+            const qrImage = document.createElement('img');
+            qrImage.crossOrigin = 'anonymous';
+
+            await new Promise<void>((resolve, reject) => {
+              qrImage.onload = () => {
+                // Draw existing QR code
+                ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
+
+                // Load and draw logo
+                const logo = document.createElement('img');
+                logo.crossOrigin = 'anonymous';
+                logo.onload = () => {
+                  // Calculate center position
+                  const logoX = (qrSize - logoSize) / 2;
+                  const logoY = (qrSize - logoSize) / 2;
+
+                  // Draw white background for logo
+                  const padding = 4;
+                  ctx.fillStyle = '#FFFFFF';
+                  ctx.fillRect(
+                    logoX - padding,
+                    logoY - padding,
+                    logoSize + padding * 2,
+                    logoSize + padding * 2
+                  );
+
+                  // Draw logo
+                  ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+                  resolve();
+                };
+                logo.onerror = () => resolve(); // If logo fails, still resolve
+                logo.src = '/logo.png';
+              };
+              qrImage.onerror = reject;
+              qrImage.src = qr.qrImage!;
+            });
+
+            // Return QR with logo
+            return { ...qr, qrImage: canvas.toDataURL('image/png') };
+          } catch (error) {
+            // If any error, return original
+            return qr;
+          }
+        })
+      );
+
+      setQrCodesWithLogo(updatedQRCodes);
+    }
+
+    addLogoToQRCodes();
+  }, [qrCodes]);
 
   const downloadQRCode = (qr: QRCode) => {
     if (!qr.qrImage) {
@@ -34,18 +107,18 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success(`Đã tải mã QR ${qr.cupId}`);
   };
 
   const downloadAllQRCodes = () => {
-    qrCodes.forEach((qr, index) => {
+    qrCodesWithLogo.forEach((qr, index) => {
       setTimeout(() => {
         downloadQRCode(qr);
-      }, index * 200); // Delay 200ms giữa mỗi download
+      }, index * 200);
     });
-    
-    toast.success(`Đang tải ${qrCodes.length} mã QR...`);
+
+    toast.success(`Đang tải ${qrCodesWithLogo.length} mã QR...`);
   };
 
   const copyQRData = (qrData: string) => {
@@ -84,7 +157,7 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
                 Mã QR đã tạo thành công
               </h2>
               <p className="text-sm text-dark-500 mt-1">
-                {qrCodes.length} mã QR - {getMaterialDisplayName(qrCodes[0]?.material || '')}
+                {qrCodesWithLogo.length} mã QR - {getMaterialDisplayName(qrCodesWithLogo[0]?.material || '')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -107,7 +180,7 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
           {/* QR Codes Grid */}
           <div className="flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {qrCodes.map((qr) => (
+              {qrCodesWithLogo.map((qr) => (
                 <motion.div
                   key={qr.cupId}
                   initial={{ opacity: 0, scale: 0.9 }}

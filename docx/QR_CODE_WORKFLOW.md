@@ -137,3 +137,6 @@ Hệ thống sử dụng fallback để đảm bảo hoạt động:
 - Kiểm tra QR code data format
 
 
+
+
+

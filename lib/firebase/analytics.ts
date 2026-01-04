@@ -175,9 +175,7 @@ export async function getAdvancedAnalytics(): Promise<AdvancedAnalytics | null> 
       predictedCupsNeededNextWeek,
       recommendedStockLevel,
     };
-  } catch (error) {
-    console.error('Error getting advanced analytics:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -279,9 +277,7 @@ export async function getPersonalEcoDashboard(userId: string): Promise<PersonalE
       monthlyStats,
       percentileRank,
     };
-  } catch (error) {
-    console.error('Error getting personal eco dashboard:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -364,9 +360,7 @@ export async function getTransactionHistory(
     );
 
     return history;
-  } catch (error) {
-    console.error('Error getting transaction history:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -458,9 +452,7 @@ export async function generateDailyReport(): Promise<DailyReportData> {
       topStores,
       alerts,
     };
-  } catch (error) {
-    console.error('Error generating daily report:', error);
-    return {
+  } catch (error) {    return {
       date: new Date().toISOString().split('T')[0],
       totalTransactions: 0,
       completedTransactions: 0,

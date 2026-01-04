@@ -56,10 +56,9 @@ export async function POST(request: Request) {
           { status: 400 }
         );
     }
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/bulk:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

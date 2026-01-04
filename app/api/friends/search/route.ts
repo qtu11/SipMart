@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByStudentId } from '@/lib/firebase/friends';
+import { findUserByStudentId } from '@/lib/supabase/friends';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,10 +26,9 @@ export async function GET(request: NextRequest) {
       success: true,
       user,
     });
-  } catch (error: any) {
-    console.error('Search user error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

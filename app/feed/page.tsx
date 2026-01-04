@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, MessageCircle, Share2, Camera, Plus, Image as ImageIcon, X, Send } from 'lucide-react';
-import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
+import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
@@ -51,7 +51,7 @@ export default function FeedPage() {
       const response = await fetch('/api/feed/posts');
       if (!response.ok) throw new Error('Failed to fetch feed');
       const data = await response.json();
-      
+
       // Map posts và check liked status
       const mappedPosts = (data.posts || []).map((post: FeedPost) => ({
         ...post,
@@ -62,9 +62,10 @@ export default function FeedPage() {
         })),
         liked: user ? (post.likedBy || []).includes(user.id || user.user_id) : false,
       }));
-      
+
       setPosts(mappedPosts);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching feed:', error);
       toast.error('Không thể tải feed');
       setPosts([]);
@@ -74,17 +75,30 @@ export default function FeedPage() {
   }, [user]);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((currentUser) => {
-      if (!currentUser) {
-        router.push('/auth/login');
-        return;
+    const initFeed = async () => {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        // fetchFeed will run via the effect below or we can call it here if we remove 'user' dep
       }
-      setUser(currentUser);
-      fetchFeed();
-    });
 
-    return () => unsubscribe();
-  }, [router, fetchFeed]);
+      const unsubscribe = onAuthChange((user) => {
+        if (!user) {
+          router.push('/auth/login');
+          return;
+        }
+        setUser(user);
+      });
+      return () => unsubscribe();
+    };
+    initFeed();
+  }, [router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchFeed();
+    }
+  }, [user, fetchFeed]);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -125,16 +139,17 @@ export default function FeedPage() {
 
       const data = await response.json();
       toast.success('Đăng bài thành công! +10 điểm');
-      
+
       // Reset form
       setSelectedImage(null);
       setCaption('');
       setShowUpload(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      
+
       // Refresh feed
       fetchFeed();
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Upload error:', error);
       toast.error('Không thể đăng bài');
     } finally {
@@ -158,23 +173,24 @@ export default function FeedPage() {
       if (!response.ok) throw new Error('Like failed');
 
       const data = await response.json();
-      
+
       // Update local state
       setPosts(prev =>
         prev.map(post =>
           post.postId === postId
             ? {
-                ...post,
-                liked: data.isLiked,
-                likes: data.isLiked ? post.likes + 1 : post.likes - 1,
-                likedBy: data.isLiked
-                  ? [...(post.likedBy || []), user.id || user.user_id]
-                  : (post.likedBy || []).filter(id => id !== (user.id || user.user_id)),
-              }
+              ...post,
+              liked: data.isLiked,
+              likes: data.isLiked ? post.likes + 1 : post.likes - 1,
+              likedBy: data.isLiked
+                ? [...(post.likedBy || []), user.id || user.user_id]
+                : (post.likedBy || []).filter(id => id !== (user.id || user.user_id)),
+            }
             : post
         )
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Like error:', error);
       toast.error('Không thể like bài viết');
     }
@@ -200,10 +216,11 @@ export default function FeedPage() {
 
       toast.success('Đã thêm bình luận');
       setCommentText({ ...commentText, [postId]: '' });
-      
+
       // Refresh feed
       fetchFeed();
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Comment error:', error);
       toast.error('Không thể thêm bình luận');
     }
@@ -303,9 +320,8 @@ export default function FeedPage() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => handleLike(post.postId)}
-                    className={`flex items-center gap-2 ${
-                      post.liked ? 'text-red-500' : 'text-dark-400'
-                    } hover:text-red-500 transition`}
+                    className={`flex items-center gap-2 ${post.liked ? 'text-red-500' : 'text-dark-400'
+                      } hover:text-red-500 transition`}
                   >
                     <Heart className={`w-6 h-6 ${post.liked ? 'fill-current' : ''}`} />
                     <span className="font-semibold">{post.likes}</span>
@@ -365,7 +381,7 @@ export default function FeedPage() {
                         </div>
                       </div>
                     ))}
-                    
+
                     {/* Add Comment */}
                     {user && (
                       <div className="flex gap-2 pt-2">

@@ -97,7 +97,7 @@ export function useNotifications() {
         fcmToken: token,
         fcmTokenUpdatedAt: new Date(),
       }, { merge: true });
-      console.log('FCM token saved to Firestore');
+      
     } catch (error) {
       console.error('Error saving FCM token:', error);
     }

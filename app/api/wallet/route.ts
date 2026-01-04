@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUser } from '@/lib/supabase/users';
+import { getUser, updateWallet } from '@/lib/supabase/users';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
       totalCupsSaved: user.totalCupsSaved,
       totalPlasticReduced: user.totalPlasticReduced,
     });
-  } catch (error: any) {
-    console.error('Wallet error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
 
     // TODO: Tích hợp payment gateway (MoMo, ZaloPay, VNPay)
     // Hiện tại chỉ cập nhật balance
-    const { updateWallet } = await import('@/lib/supabase/users');
     await updateWallet(userId, amount);
 
     return NextResponse.json({
@@ -62,10 +61,9 @@ export async function POST(request: NextRequest) {
       message: 'Nạp tiền thành công',
       newBalance: user.walletBalance + amount,
     });
-  } catch (error: any) {
-    console.error('Top-up error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

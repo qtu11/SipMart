@@ -27,7 +27,8 @@ export default function TreePage() {
       const res = await fetch(`/api/tree?userId=${userId}`);
       const data = await res.json();
       setTree(data);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching tree:', error);
       // Fallback mock data
       setTree({

@@ -102,9 +102,7 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
     }
 
     return null;
-  } catch (error) {
-    console.error('Error parsing QR code:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 

@@ -16,10 +16,9 @@ export async function POST(request: Request) {
 
     const result = await claimReward(userId, rewardId);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/rewards/claim:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -39,10 +38,9 @@ export async function GET(request: Request) {
 
     const claims = await getUserRewardClaims(userId);
     return NextResponse.json({ success: true, claims });
-  } catch (error: any) {
-    console.error('Error in GET /api/rewards/claim:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

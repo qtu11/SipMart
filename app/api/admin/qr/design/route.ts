@@ -38,10 +38,9 @@ export async function POST(request: Request) {
       qrCode: qrDataUrl,
       cupId,
     });
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/qr/design:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

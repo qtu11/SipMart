@@ -56,7 +56,8 @@ export default function StoriesPage() {
         storyGroupsRef.current = groups;
         setStories(data.stories);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error loading stories:', error);
       toast.error('Lỗi khi tải stories');
     } finally {
@@ -148,7 +149,8 @@ export default function StoriesPage() {
             : s
         ));
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi like story');
     }
   };

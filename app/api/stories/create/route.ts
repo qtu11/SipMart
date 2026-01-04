@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStory, createAchievementStory } from '@/lib/firebase/stories';
+import { createStory, createAchievementStory } from '@/lib/supabase/stories';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,23 +20,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let storyId: string;
+    let story;
 
     if (type === 'achievement' && achievementType) {
-      storyId = await createAchievementStory(userId, achievementType, achievementData || {});
+      story = await createAchievementStory(userId, achievementType, achievementData || {});
     } else {
-      storyId = await createStory(userId, type, content, thumbnail, achievementType, achievementData);
+      story = await createStory({
+        userId,
+        type,
+        content,
+        thumbnail,
+        achievementType,
+        achievementData,
+      });
     }
 
     return NextResponse.json({
       success: true,
-      storyId,
+      story,
       message: 'Story created successfully',
     });
-  } catch (error: any) {
-    console.error('Create story error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to create story' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Failed to create story' },
       { status: 500 }
     );
   }

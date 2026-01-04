@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runTransaction, doc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { getCup } from '@/lib/firebase/cups';
-import { addGreenPoints, incrementCupsSaved, getUser } from '@/lib/supabase/users';
-import { getTransaction } from '@/lib/firebase/transactions';
-import { getStore } from '@/lib/firebase/stores';
-import { createAchievementStory } from '@/lib/firebase/stories';
-
-const DEPOSIT_AMOUNT = parseInt(process.env.NEXT_PUBLIC_DEPOSIT_AMOUNT || '20000');
-const GREEN_POINTS_RETURN = 50; // Điểm khi trả đúng hạn
-const GREEN_POINTS_OVERDUE = 20; // Điểm khi trả quá hạn (ít hơn)
+import { getUser } from '@/lib/supabase/users';
+import { getCup, markCupForCleaning } from '@/lib/supabase/cups';
+import { getStore, returnCupToStore } from '@/lib/supabase/stores';
+import { getTransaction, completeTransaction } from '@/lib/supabase/transactions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,102 +51,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
     }
 
-    // Thực hiện transaction atomic
-    const returnTime = new Date();
-    const isOverdue = returnTime > transaction.dueTime;
-    const greenPoints = isOverdue ? GREEN_POINTS_OVERDUE : GREEN_POINTS_RETURN;
+    // Hoàn tất transaction (includes refund calculation, green points, etc.)
+    const completedTransaction = await completeTransaction(
+      cup.currentTransactionId,
+      storeId
+    );
 
-    // Hoàn tiền cọc trong Supabase (trước khi cập nhật Firestore transaction)
-    const { updateWallet } = await import('@/lib/supabase/users');
-    await updateWallet(userId, DEPOSIT_AMOUNT);
-    
-    await runTransaction(db, async (tx) => {
+    // ATOMIC: Return cup using database RPC (prevents race conditions)
+    const { returnCupAtomic } = await import('@/lib/supabase/cups');
+    const returnResult = await returnCupAtomic(cupId, userId);
 
-      // Cập nhật cup status
-      const cupRef = doc(db, 'cups', cupId);
-      tx.update(cupRef, {
-        status: 'cleaning',
-        currentUserId: null,
-        currentTransactionId: null,
-        lastActivity: Timestamp.now(),
-      });
+    if (!returnResult.success) {
+      throw new Error(returnResult.message);
+    }
 
-      // Cập nhật transaction
-      if (!cup.currentTransactionId) {
-        throw new Error('Transaction ID not found');
-      }
-      const transactionRef = doc(db, 'transactions', cup.currentTransactionId);
-      const overdueHours = isOverdue
-        ? Math.floor((returnTime.getTime() - transaction.dueTime.getTime()) / (1000 * 60 * 60))
-        : 0;
-      
-      tx.update(transactionRef, {
-        returnStoreId: storeId,
-        returnTime: Timestamp.fromDate(returnTime),
-        status: 'completed',
-        refundAmount: DEPOSIT_AMOUNT,
-        greenPointsEarned: greenPoints,
-        isOverdue,
-        overdueHours,
-      });
+    // Cập nhật inventory
+    await returnCupToStore(storeId);
 
-      // Cập nhật inventory
-      const storeRef = doc(db, 'stores', storeId);
-      tx.update(storeRef, {
-        'cupInventory.inUse': store.cupInventory.inUse - 1,
-        'cupInventory.cleaning': store.cupInventory.cleaning + 1,
-      });
-    });
-
-    // Cộng green points và cập nhật stats (không cần transaction vì đã hoàn tất)                                                       
-    const rankResult = await addGreenPoints(userId, greenPoints, `Trả ly ${isOverdue ? 'quá hạn' : 'đúng hạn'}`);
-    await incrementCupsSaved(userId);
-
-    // Lấy thông tin user sau khi update
+    // Lấy thông tin user sau khi update để tạo story
     const updatedUser = await getUser(userId);
     const cupsSaved = updatedUser?.totalCupsSaved || 0;
 
-    // Tạo story tự động khi trả ly thành công (chỉ khi trả đúng hạn)
-    if (!isOverdue) {
-      try {
-        await createAchievementStory(userId, 'cup_saved', {
-          count: cupsSaved,
-          message: `Đã cứu ${cupsSaved} ly nhựa! 🌱`,
-        });
-      } catch (storyError) {
-        console.error('Error creating story:', storyError);
-        // Không block return nếu story fail
-      }
-    }
-
-    // Tạo story khi rank up
-    if (rankResult.rankUp && rankResult.newRank !== 'seed') {
-      try {
-        await createAchievementStory(userId, 'rank_up', {
-          rank: rankResult.newRank,
-        });
-      } catch (storyError) {
-        console.error('Error creating rank up story:', storyError);
-      }
-    }
+    // TODO: Tạo story tự động khi trả ly thành công (cần implement Supabase stories helper)
+    // if (!completedTransaction.isOverdue) {
+    //   await createAchievementStory(userId, 'cup_saved', {
+    //     count: cupsSaved,
+    //     message: `Đã cứu ${cupsSaved} ly nhựa! 🌱`,
+    //   });
+    // }
 
     return NextResponse.json({
       success: true,
-      message: isOverdue
+      message: completedTransaction.isOverdue
         ? '✅ Trả ly thành công! (Trả quá hạn, bạn nhận được ít điểm hơn)'
-        : '🌱 Trả ly thành công! Bạn nhận được 50 Green Points!',
-      refundAmount: DEPOSIT_AMOUNT,
-      greenPointsEarned: greenPoints,
-      isOverdue,
-      rankUp: rankResult.rankUp ? { newRank: rankResult.newRank } : undefined,
-      storyCreated: !isOverdue,
+        : `🌱 Trả ly thành công! Bạn nhận được ${completedTransaction.greenPointsEarned} Green Points!`,
+      refundAmount: completedTransaction.refundAmount,
+      greenPointsEarned: completedTransaction.greenPointsEarned,
+      isOverdue: completedTransaction.isOverdue,
+      overdueHours: completedTransaction.overdueHours,
+      cupsSaved,
     });
-  } catch (error: any) {
-    console.error('Return error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

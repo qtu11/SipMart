@@ -21,10 +21,9 @@ export async function GET(request: Request) {
 
     const methods = await getUserPaymentMethods(userId);
     return NextResponse.json({ success: true, methods });
-  } catch (error: any) {
-    console.error('Error in GET /api/payment/methods:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -52,10 +51,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/payment/methods:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -86,10 +84,9 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in PUT /api/payment/methods:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

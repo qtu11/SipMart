@@ -54,7 +54,8 @@ export default function UsersManagementPage() {
       if (!res.ok) throw new Error('Failed to fetch users');
       const data = await res.json();
       setUsers(data.users || []);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching users:', error);
       toast.error('Không thể tải danh sách users');
     } finally {
@@ -107,7 +108,8 @@ export default function UsersManagementPage() {
       
       toast.success('Đã blacklist user');
       fetchUsers();
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Blacklist error:', error);
       toast.error('Không thể blacklist user');
     }
@@ -134,7 +136,8 @@ export default function UsersManagementPage() {
       
       toast.success('Đã gỡ blacklist user');
       fetchUsers();
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Unblacklist error:', error);
       toast.error('Không thể gỡ blacklist user');
     }

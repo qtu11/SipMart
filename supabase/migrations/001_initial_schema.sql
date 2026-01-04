@@ -1,156 +1,130 @@
--- CupSipSmart Database Schema for Supabase (PostgreSQL)
+-- CupSipSmart Supabase Database Schema
+-- Run this script in your Supabase SQL Editor
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Users table
-CREATE TABLE users (
-  user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  student_id TEXT UNIQUE,
+-- ============================================
+-- USERS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS users (
+  user_id UUID PRIMARY KEY,
+  student_id TEXT,
   email TEXT UNIQUE NOT NULL,
   display_name TEXT,
   avatar TEXT,
-  wallet_balance DECIMAL(10, 2) DEFAULT 0,
+  wallet_balance NUMERIC DEFAULT 0,
   green_points INTEGER DEFAULT 0,
   rank_level TEXT DEFAULT 'seed' CHECK (rank_level IN ('seed', 'sprout', 'sapling', 'tree', 'forest')),
   total_cups_saved INTEGER DEFAULT 0,
   total_plastic_reduced INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  last_activity TIMESTAMPTZ DEFAULT NOW(),
-  is_blacklisted BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_blacklisted BOOLEAN DEFAULT FALSE,
   blacklist_reason TEXT,
   blacklist_count INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_student_id ON users(student_id);
-CREATE INDEX idx_users_blacklisted ON users(is_blacklisted);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
+CREATE INDEX IF NOT EXISTS idx_users_blacklisted ON users(is_blacklisted);
 
--- Eco Actions table
-CREATE TABLE eco_actions (
+-- ============================================
+-- ECO ACTIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS eco_actions (
   action_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('borrow', 'return', 'checkin', 'share')),
   cup_id TEXT,
   points INTEGER DEFAULT 0,
-  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   description TEXT NOT NULL
 );
 
-CREATE INDEX idx_eco_actions_user_id ON eco_actions(user_id);
-CREATE INDEX idx_eco_actions_timestamp ON eco_actions(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_eco_actions_user ON eco_actions(user_id);
+CREATE INDEX IF NOT EXISTS idx_eco_actions_timestamp ON eco_actions(timestamp);
 
--- Cups table
-CREATE TABLE cups (
+-- ============================================
+-- CUPS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS cups (
   cup_id TEXT PRIMARY KEY,
   material TEXT NOT NULL CHECK (material IN ('pp_plastic', 'bamboo_fiber')),
   status TEXT DEFAULT 'available' CHECK (status IN ('available', 'in_use', 'cleaning', 'lost')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  last_cleaned_at TIMESTAMPTZ,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_cleaned_at TIMESTAMP WITH TIME ZONE,
   total_uses INTEGER DEFAULT 0,
-  current_user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+  current_user_id UUID,
   current_transaction_id UUID
 );
 
-CREATE INDEX idx_cups_status ON cups(status);
-CREATE INDEX idx_cups_current_user ON cups(current_user_id);
+CREATE INDEX IF NOT EXISTS idx_cups_status ON cups(status);
+CREATE INDEX IF NOT EXISTS idx_cups_user ON cups(current_user_id);
 
--- Transactions table
-CREATE TABLE transactions (
-  transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  cup_id TEXT NOT NULL REFERENCES cups(cup_id) ON DELETE CASCADE,
-  borrow_store_id UUID NOT NULL,
-  return_store_id UUID,
-  borrow_time TIMESTAMPTZ DEFAULT NOW(),
-  due_time TIMESTAMPTZ NOT NULL,
-  return_time TIMESTAMPTZ,
-  status TEXT DEFAULT 'ongoing' CHECK (status IN ('ongoing', 'completed', 'overdue', 'cancelled')),
-  deposit_amount DECIMAL(10, 2) NOT NULL,
-  refund_amount DECIMAL(10, 2),
-  green_points_earned INTEGER,
-  is_overdue BOOLEAN DEFAULT false,
-  overdue_hours INTEGER
-);
-
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_cup_id ON transactions(cup_id);
-CREATE INDEX idx_transactions_status ON transactions(status);
-CREATE INDEX idx_transactions_borrow_time ON transactions(borrow_time DESC);
-
--- Stores table
-CREATE TABLE stores (
+-- ============================================
+-- STORES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS stores (
   store_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
-  gps_lat DECIMAL(10, 8) NOT NULL,
-  gps_lng DECIMAL(11, 8) NOT NULL,
+  gps_lat NUMERIC NOT NULL,
+  gps_lng NUMERIC NOT NULL,
   address TEXT NOT NULL,
   cup_available INTEGER DEFAULT 0,
   cup_in_use INTEGER DEFAULT 0,
   cup_cleaning INTEGER DEFAULT 0,
   cup_total INTEGER DEFAULT 0,
   partner_status TEXT DEFAULT 'active' CHECK (partner_status IN ('active', 'inactive', 'pending')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_stores_status ON stores(partner_status);
+CREATE INDEX IF NOT EXISTS idx_stores_status ON stores(partner_status);
+CREATE INDEX IF NOT EXISTS idx_stores_location ON stores(gps_lat, gps_lng);
 
--- Admins table
-CREATE TABLE admins (
+-- ============================================
+-- TRANSACTIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS transactions (
+  transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  cup_id TEXT NOT NULL REFERENCES cups(cup_id) ON DELETE CASCADE,
+  borrow_store_id UUID NOT NULL REFERENCES stores(store_id),
+  return_store_id UUID REFERENCES stores(store_id),
+  borrow_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  due_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  return_time TIMESTAMP WITH TIME ZONE,
+  status TEXT DEFAULT 'ongoing' CHECK (status IN ('ongoing', 'completed', 'overdue', 'cancelled')),
+  deposit_amount NUMERIC NOT NULL,
+  refund_amount NUMERIC,
+  green_points_earned INTEGER,
+  is_overdue BOOLEAN DEFAULT FALSE,
+  overdue_hours INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_cup ON transactions(cup_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_borrow_time ON transactions(borrow_time);
+
+-- ============================================
+-- ADMINS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS admins (
   admin_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'store_admin')),
-  store_id UUID REFERENCES stores(store_id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  store_id UUID REFERENCES stores(store_id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_admins_email ON admins(email);
+CREATE INDEX IF NOT EXISTS idx_admins_email ON admins(email);
 
--- Admin Actions (Log)
-CREATE TABLE admin_actions (
-  action_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  admin_id UUID NOT NULL REFERENCES admins(admin_id) ON DELETE CASCADE,
-  type TEXT NOT NULL,
-  details TEXT NOT NULL,
-  timestamp TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_admin_actions_admin_id ON admin_actions(admin_id);
-CREATE INDEX idx_admin_actions_timestamp ON admin_actions(timestamp DESC);
-
--- Leaderboard (cached)
-CREATE TABLE leaderboard (
-  entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID UNIQUE NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  display_name TEXT NOT NULL,
-  avatar TEXT,
-  green_points INTEGER DEFAULT 0,
-  total_cups_saved INTEGER DEFAULT 0,
-  rank INTEGER NOT NULL,
-  department TEXT,
-  class TEXT,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_leaderboard_rank ON leaderboard(rank);
-CREATE INDEX idx_leaderboard_points ON leaderboard(green_points DESC);
-
--- Virtual Trees
-CREATE TABLE virtual_trees (
-  tree_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID UNIQUE NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  level INTEGER DEFAULT 1 CHECK (level >= 1 AND level <= 10),
-  growth DECIMAL(5, 2) DEFAULT 0 CHECK (growth >= 0 AND growth <= 100),
-  health TEXT DEFAULT 'healthy' CHECK (health IN ('healthy', 'wilting', 'dead')),
-  last_watered TIMESTAMPTZ DEFAULT NOW(),
-  total_waterings INTEGER DEFAULT 0
-);
-
-CREATE INDEX idx_virtual_trees_user_id ON virtual_trees(user_id);
-
--- Green Feed Posts
-CREATE TABLE green_feed_posts (
+-- ============================================
+-- GREEN FEED POSTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS green_feed_posts (
   post_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   display_name TEXT,
@@ -160,65 +134,75 @@ CREATE TABLE green_feed_posts (
   cup_id TEXT,
   green_points_earned INTEGER DEFAULT 0,
   likes INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_feed_posts_user_id ON green_feed_posts(user_id);
-CREATE INDEX idx_feed_posts_created_at ON green_feed_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_user ON green_feed_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_created ON green_feed_posts(created_at);
 
--- Comments
-CREATE TABLE comments (
+-- ============================================
+-- COMMENTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS comments (
   comment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   post_id UUID NOT NULL REFERENCES green_feed_posts(post_id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   display_name TEXT,
   content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_comments_post_id ON comments(post_id);
-CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
 
--- Post Likes
-CREATE TABLE post_likes (
+-- ============================================
+-- POST LIKES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS post_likes (
   like_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   post_id UUID NOT NULL REFERENCES green_feed_posts(post_id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(post_id, user_id)
 );
 
-CREATE INDEX idx_post_likes_post_id ON post_likes(post_id);
-CREATE INDEX idx_post_likes_user_id ON post_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_likes_user ON post_likes(user_id);
 
--- Friend Requests
-CREATE TABLE friend_requests (
+-- ============================================
+-- FRIEND REQUESTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS friend_requests (
   request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   from_user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   to_user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(from_user_id, to_user_id)
 );
 
-CREATE INDEX idx_friend_requests_from_user ON friend_requests(from_user_id);
-CREATE INDEX idx_friend_requests_to_user ON friend_requests(to_user_id);
-CREATE INDEX idx_friend_requests_status ON friend_requests(status);
+CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id);
+CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id);
+CREATE INDEX IF NOT EXISTS idx_friend_requests_status ON friend_requests(status);
 
--- Friendships
-CREATE TABLE friendships (
+-- ============================================
+-- FRIENDSHIPS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS friendships (
   friendship_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id_1 UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   user_id_2 UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id_1, user_id_2)
 );
 
-CREATE INDEX idx_friendships_user1 ON friendships(user_id_1);
-CREATE INDEX idx_friendships_user2 ON friendships(user_id_2);
+CREATE INDEX IF NOT EXISTS idx_friendships_user1 ON friendships(user_id_1);
+CREATE INDEX IF NOT EXISTS idx_friendships_user2 ON friendships(user_id_2);
 
--- Stories
-CREATE TABLE stories (
+-- ============================================
+-- STORIES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS stories (
   story_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   display_name TEXT,
@@ -227,63 +211,140 @@ CREATE TABLE stories (
   content TEXT NOT NULL,
   thumbnail TEXT,
   achievement_type TEXT CHECK (achievement_type IN ('cup_saved', 'points', 'rank_up', 'challenge')),
-  achievement_data JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL
+  achievement_data TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
-CREATE INDEX idx_stories_user_id ON stories(user_id);
-CREATE INDEX idx_stories_created_at ON stories(created_at DESC);
-CREATE INDEX idx_stories_expires_at ON stories(expires_at);
+CREATE INDEX IF NOT EXISTS idx_stories_user ON stories(user_id);
+CREATE INDEX IF NOT EXISTS idx_stories_created ON stories(created_at);
+CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at);
 
--- Story Views
-CREATE TABLE story_views (
+-- ============================================
+-- STORY VIEWS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS story_views (
   view_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   story_id UUID NOT NULL REFERENCES stories(story_id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  viewed_at TIMESTAMPTZ DEFAULT NOW(),
+  viewed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(story_id, user_id)
 );
 
-CREATE INDEX idx_story_views_story_id ON story_views(story_id);
-CREATE INDEX idx_story_views_user_id ON story_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_story_views_story ON story_views(story_id);
+CREATE INDEX IF NOT EXISTS idx_story_views_user ON story_views(user_id);
 
--- Notifications
-CREATE TABLE notifications (
+-- ============================================
+-- NOTIFICATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS notifications (
   notification_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('success', 'warning', 'info', 'reminder')),
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   url TEXT,
-  data JSONB,
-  read BOOLEAN DEFAULT false,
-  timestamp TIMESTAMPTZ DEFAULT NOW()
+  data TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_read ON notifications(read);
-CREATE INDEX idx_notifications_timestamp ON notifications(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_notifications_timestamp ON notifications(timestamp);
 
--- Enable Row Level Security
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+
+-- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE eco_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE green_feed_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE story_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- Create function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own data" ON users;
+DROP POLICY IF EXISTS "Users can update their own data" ON users;
+DROP POLICY IF EXISTS "Service role can do anything" ON users;
+DROP POLICY IF EXISTS "Anyone can view cups" ON cups;
+DROP POLICY IF EXISTS "Service role can manage cups" ON cups;
+DROP POLICY IF EXISTS "Anyone can view stores" ON stores;
+DROP POLICY IF EXISTS "Service role can manage stores" ON stores;
+DROP POLICY IF EXISTS "Users can view their transactions" ON transactions;
+DROP POLICY IF EXISTS "Service role can manage transactions" ON transactions;
+DROP POLICY IF EXISTS "Anyone can view feed posts" ON green_feed_posts;
+DROP POLICY IF EXISTS "Users can create their posts" ON green_feed_posts;
+DROP POLICY IF EXISTS "Users can delete their posts" ON green_feed_posts;
+DROP POLICY IF EXISTS "Anyone can view comments" ON comments;
+DROP POLICY IF EXISTS "Users can create comments" ON comments;
+DROP POLICY IF EXISTS "Users can view their friend requests" ON friend_requests;
+DROP POLICY IF EXISTS "Users can create friend requests" ON friend_requests;
+DROP POLICY IF EXISTS "Users can view their friendships" ON friendships;
+DROP POLICY IF EXISTS "Anyone can view non-expired stories" ON stories;
+DROP POLICY IF EXISTS "Users can create their stories" ON stories;
+
+-- Users policies
+CREATE POLICY "Users can view their own data" ON users FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update their own data" ON users FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Service role can do anything" ON users FOR ALL USING (true); -- Service role bypasses RLS anyway
+
+-- Cups policies (public read, service role write)
+CREATE POLICY "Anyone can view cups" ON cups FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Service role can manage cups" ON cups FOR ALL USING (true);
+
+-- Stores policies (public read)
+CREATE POLICY "Anyone can view stores" ON stores FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Service role can manage stores" ON stores FOR ALL USING (true);
+
+-- Transactions policies
+CREATE POLICY "Users can view their transactions" ON transactions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service role can manage transactions" ON transactions FOR ALL USING (true);
+
+-- Green Feed policies
+CREATE POLICY "Anyone can view feed posts" ON green_feed_posts FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can create their posts" ON green_feed_posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete their posts" ON green_feed_posts FOR DELETE USING (auth.uid() = user_id);
+
+-- Comments policies
+CREATE POLICY "Anyone can view comments" ON comments FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can create comments" ON comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+-- Friends policies
+CREATE POLICY "Users can view their friend requests" ON friend_requests FOR SELECT 
+  USING (auth.uid() = from_user_id OR auth.uid() = to_user_id);
+CREATE POLICY "Users can create friend requests" ON friend_requests FOR INSERT 
+  WITH CHECK (auth.uid() = from_user_id);
+CREATE POLICY "Users can view their friendships" ON friendships FOR SELECT 
+  USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
+
+-- Stories policies
+CREATE POLICY "Anyone can view non-expired stories" ON stories FOR SELECT 
+  TO authenticated USING (expires_at > NOW());
+CREATE POLICY "Users can create their stories" ON stories FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+-- ============================================
+-- FUNCTIONS
+-- ============================================
+
+-- Function to check if user is admin
+CREATE OR REPLACE FUNCTION is_admin_user(user_email TEXT)
+RETURNS BOOLEAN AS $$
 BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
+  RETURN EXISTS (SELECT 1 FROM admins WHERE email = user_email);
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger for leaderboard
-CREATE TRIGGER update_leaderboard_updated_at BEFORE UPDATE ON leaderboard
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
+-- Success message
+SELECT 'CupSipSmart database schema created successfully!' AS status;

@@ -30,12 +30,14 @@ export default function ProfilePage() {
           const userId = (currentUser as any).id || (currentUser as any).user_id;
           const data = await getUser(userId);
           setUserData(data);
-        } catch (error) {
+        } catch (error: unknown) {
+      const err = error as Error;
           console.error('Error fetching user data:', error);
         } finally {
           setLoading(false);
         }
-      } catch (error) {
+      } catch (error: unknown) {
+      const err = error as Error;
         console.error('Error checking auth:', error);
         router.push('/auth/login');
         setLoading(false);
@@ -56,7 +58,8 @@ export default function ProfilePage() {
         const userId = (currentUser as any).id || (currentUser as any).user_id;
         const data = await getUser(userId);
         setUserData(data);
-      } catch (error) {
+      } catch (error: unknown) {
+      const err = error as Error;
         console.error('Error fetching user data:', error);
       }
     });

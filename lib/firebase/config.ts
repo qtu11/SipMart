@@ -19,15 +19,10 @@ if (typeof window !== 'undefined') {
   if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined') missingConfigs.push('NEXT_PUBLIC_FIREBASE_API_KEY');
   if (!firebaseConfig.authDomain || firebaseConfig.authDomain === 'undefined') missingConfigs.push('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
   if (!firebaseConfig.projectId || firebaseConfig.projectId === 'undefined') missingConfigs.push('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
-  
+
   if (missingConfigs.length > 0) {
-    console.error('❌ Firebase configuration missing:', missingConfigs);
-    console.error('📝 Please create .env.local file with Firebase config. See SETUP.md for details.');
-    console.error('Current config:', {
-      apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
-      authDomain: firebaseConfig.authDomain || 'MISSING',
-      projectId: firebaseConfig.projectId || 'MISSING',
-    });
+    console.error(`Missing Firebase config: ${missingConfigs.join(', ')}`);
+
   }
 }
 
@@ -36,11 +31,8 @@ let app: FirebaseApp;
 if (!getApps().length) {
   try {
     app = initializeApp(firebaseConfig);
-    console.log('✅ Firebase initialized successfully');
-  } catch (error: any) {
-    console.error('❌ Firebase initialization error:', error);
-    console.error('💡 Make sure all Firebase config values are set in .env.local');
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error; throw error;
   }
 } else {
   app = getApps()[0];

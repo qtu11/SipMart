@@ -32,9 +32,7 @@ export async function createNotification(notificationData: NotificationData): Pr
     });
 
     return notificationRef.id;
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -47,9 +45,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
       read: true,
       readAt: serverTimestamp(),
     });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -63,9 +59,7 @@ export async function deleteNotification(notificationId: string): Promise<void> 
       deleted: true,
       deletedAt: serverTimestamp(),
     });
-  } catch (error) {
-    console.error('Error deleting notification:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -79,9 +73,7 @@ export async function getUserFCMToken(userId: string): Promise<string | null> {
       return (userDoc as any).fcmToken;
     }
     return null;
-  } catch (error) {
-    console.error('Error getting FCM token:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 

@@ -12,36 +12,51 @@ export async function createUser(
   studentId?: string
 ): Promise<User> {
   try {
-    console.log('🔵 Creating user in Supabase:', { userId, email, displayName, studentId });
-    
+    // Upsert with ignoreDuplicates: true handles the "if exists do nothing" case
+    // Note: upsert in Supabase might not return data if ignoreDuplicates is true and row exists?
+    // Let's test standard upsert without ignoreDuplicates but ONLY setting fields on insert
+    // Actually, ignoreDuplicates is cleaner if we don't want to change existing data.
+
     const { data, error } = await getAdmin()
       .from('users')
-      .insert({
-        user_id: userId,
-        email,
-        display_name: displayName || email.split('@')[0],
-        student_id: studentId || null,
-        wallet_balance: 0,
-        green_points: 0,
-        rank_level: 'seed',
-        total_cups_saved: 0,
-        total_plastic_reduced: 0,
-        is_blacklisted: false,
-        blacklist_count: 0,
-      })
+      .upsert(
+        {
+          user_id: userId,
+          email,
+          display_name: displayName || email.split('@')[0],
+          student_id: studentId || null,
+          wallet_balance: 0,
+          green_points: 0,
+          rank_level: 'seed',
+          total_cups_saved: 0,
+          total_plastic_reduced: 0,
+          is_blacklisted: false,
+          blacklist_count: 0,
+        },
+        { onConflict: 'user_id', ignoreDuplicates: true }
+      )
       .select()
-      .single();
+      .select()
+      .maybeSingle();
 
-    if (error) {
-      console.error('❌ Supabase insert error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      throw error;
+    if (error) throw error;
+
+    // If data is null (meaning user existed and ignoreDuplicates worked), fetch the existing user
+    if (!data) {
+      const existingUser = await getUser(userId);
+      // If user still not found, it means insert failed silently or something else is wrong
+      if (!existingUser) {
+        // Double check if user exists by email, maybe userId mismatch?
+        const byEmail = await getUserByEmail(email);
+        if (byEmail) return byEmail;
+
+        throw new Error('User creation failed: User not found after upsert');
+      }
+      return existingUser;
     }
 
-    console.log('✅ User created successfully:', data);
     return mapUserFromDb(data);
-  } catch (error: any) {
-    console.error('❌ createUser error:', error);
+  } catch (error: unknown) {
     throw error;
   }
 }

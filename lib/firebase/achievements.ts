@@ -38,9 +38,7 @@ export async function createAchievement(data: Omit<Achievement, 'achievementId' 
     });
 
     return { success: true, achievementId };
-  } catch (error) {
-    console.error('Error creating achievement:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -53,9 +51,7 @@ export async function getAllAchievements(): Promise<Achievement[]> {
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Achievement);
-  } catch (error) {
-    console.error('Error getting achievements:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -68,9 +64,7 @@ export async function getAchievementsByCategory(category: AchievementCategory): 
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Achievement);
-  } catch (error) {
-    console.error('Error getting achievements by category:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -122,9 +116,7 @@ export async function unlockAchievement(userId: string, achievementId: string) {
       userAchievement,
       rewardPoints: achievement.rewardPoints,
     };
-  } catch (error) {
-    console.error('Error unlocking achievement:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -150,9 +142,7 @@ export async function getUserAchievements(userId: string): Promise<UserAchieveme
     );
 
     return userAchievements;
-  } catch (error) {
-    console.error('Error getting user achievements:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -166,9 +156,7 @@ async function getUserAchievement(userId: string, achievementId: string): Promis
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
     return snapshot.docs[0].data() as UserAchievement;
-  } catch (error) {
-    console.error('Error getting user achievement:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -224,9 +212,7 @@ export async function updateAchievementProgress(
     }
 
     return { success: true };
-  } catch (error) {
-    console.error('Error updating achievement progress:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -288,9 +274,7 @@ export async function checkAndUnlockAchievements(userId: string, action: string,
       success: true,
       unlockedCount: results.filter(r => r.success).length,
     };
-  } catch (error) {
-    console.error('Error checking achievements:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 

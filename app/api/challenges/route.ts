@@ -18,10 +18,9 @@ export async function GET(request: Request) {
 
     const challenges = await getActiveChallenges();
     return NextResponse.json({ success: true, challenges });
-  } catch (error: any) {
-    console.error('Error in GET /api/challenges:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -41,10 +40,9 @@ export async function POST(request: Request) {
 
     const result = await joinChallenge(userId, challengeId);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/challenges:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

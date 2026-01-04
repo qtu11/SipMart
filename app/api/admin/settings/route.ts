@@ -6,10 +6,9 @@ export async function GET(request: Request) {
   try {
     const settings = await getSystemSettings();
     return NextResponse.json({ success: true, settings });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/settings:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -29,10 +28,9 @@ export async function PUT(request: Request) {
 
     const result = await updateSystemSetting(key, value, dataType, category, adminId);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in PUT /api/admin/settings:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

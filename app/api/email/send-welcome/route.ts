@@ -92,27 +92,27 @@ CupSipMart - Mượn ly, Cứu hành tinh
 
     // Gửi email qua Resend service
     const result = await sendEmail(emailContent);
-    
+
     if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error || 'Failed to send email',
-        },
-        { status: 500 }
-      );
+      console.warn('⚠️ Welcome email failed to send:', result.error);
+      // Don't fail the request, just return warning
+      return NextResponse.json({
+        success: true,
+        message: 'Welcome email scheduled (background)',
+        warning: 'Email service error: ' + result.error
+      });
     }
 
     return NextResponse.json({
       success: true,
       message: 'Welcome email sent successfully',
     });
-  } catch (error: any) {
-    console.error('Send welcome email error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to send email',
+        error: err.message || 'Failed to send email',
       },
       { status: 500 }
     );

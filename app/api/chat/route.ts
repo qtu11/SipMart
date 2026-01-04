@@ -92,7 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (parseError) {
-    console.error('Failed to parse request body:', parseError);
     return NextResponse.json({
       response: 'Xin lỗi, dữ liệu không hợp lệ. Vui lòng thử lại.',
     });
@@ -121,13 +120,13 @@ export async function POST(request: NextRequest) {
     // Thử từng model cho đến khi thành công
     for (const modelName of modelsToTry) {
       try {
-        const model = genAI.getGenerativeModel({ 
+        const model = genAI.getGenerativeModel({
           model: modelName,
         });
 
         // Tạo prompt với system context và history
         let prompt = SYSTEM_PROMPT + '\n\n';
-        
+
         // Thêm lịch sử chat nếu có
         if (history && history.length > 0) {
           prompt += 'Lịch sử cuộc trò chuyện:\n';
@@ -136,13 +135,13 @@ export async function POST(request: NextRequest) {
           });
           prompt += '\n';
         }
-        
+
         prompt += `Người dùng hỏi: ${message}\n\nHãy trả lời một cách thân thiện, ngắn gọn và hữu ích.`;
 
         // Gọi Gemini API với timeout
         const result = await Promise.race([
           model.generateContent(prompt),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Request timeout')), 30000)
           ),
         ]) as any;
@@ -153,16 +152,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           response: text,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as Error;
         // Nếu là lỗi quota (429), model không tồn tại (404), hoặc API key không hợp lệ
-        const isRecoverableError = 
-          error.status === 429 || 
-          error.status === 404 || 
-          error.message?.includes('404') || 
-          error.message?.includes('not found') ||
-          error.message?.includes('API key') ||
-          error.message?.includes('quota');
-        
+        const status = (error as any).status;
+        const isRecoverableError =
+          status === 429 ||
+          status === 404 ||
+          err.message?.includes('404') ||
+          err.message?.includes('not found') ||
+          err.message?.includes('API key') ||
+          err.message?.includes('quota');
+
         if (isRecoverableError) {
           // Chỉ log lần đầu, sau đó tiếp tục thử model khác
           if (modelsToTry.indexOf(modelName) === 0) {
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
           }
           continue;
         }
-        
+
         // Nếu là lỗi khác (lỗi nghiêm trọng), break và fallback
         break;
       }
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
   // Dùng fallback response thông minh
   // Fallback response đủ thông minh để xử lý hầu hết các câu hỏi
-  
+
   return NextResponse.json({
     response: getFallbackResponse(message),
   });
@@ -191,8 +192,8 @@ function getFallbackResponse(message: string): string {
 
   // Xử lý câu hỏi về quét QR code (ưu tiên cao nhất)
   if (
-    lowerMessage.includes('qr') || 
-    lowerMessage.includes('quét') || 
+    lowerMessage.includes('qr') ||
+    lowerMessage.includes('quét') ||
     lowerMessage.includes('scan') ||
     lowerMessage.includes('mã') && (lowerMessage.includes('quét') || lowerMessage.includes('qr'))
   ) {

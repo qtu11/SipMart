@@ -21,10 +21,9 @@ export async function GET(request: Request) {
 
     const rewards = await getAllRewards(category as any);
     return NextResponse.json({ success: true, rewards });
-  } catch (error: any) {
-    console.error('Error in GET /api/rewards:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

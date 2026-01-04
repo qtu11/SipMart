@@ -57,9 +57,7 @@ export async function uploadFeedImage(file: File, userId: string): Promise<strin
     const downloadURL = await getDownloadURL(snapshot.ref);
     
     return downloadURL;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -90,9 +88,7 @@ export async function createFeedPost(
     });
 
     return postRef.id;
-  } catch (error) {
-    console.error('Error creating feed post:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -132,9 +128,7 @@ export async function getFeedPosts(limitCount: number = 20): Promise<GreenFeedPo
     });
 
     return posts;
-  } catch (error) {
-    console.error('Error getting feed posts:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -169,9 +163,7 @@ export async function toggleLikePost(postId: string, userId: string): Promise<bo
       });
       return true;
     }
-  } catch (error) {
-    console.error('Error toggling like:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -210,9 +202,7 @@ export async function addCommentToPost(
     });
 
     return newComment.commentId;
-  } catch (error) {
-    console.error('Error adding comment:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -252,9 +242,7 @@ export async function getUserFeedPosts(userId: string): Promise<GreenFeedPost[]>
     });
 
     return posts;
-  } catch (error) {
-    console.error('Error getting user feed posts:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 

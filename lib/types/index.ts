@@ -41,6 +41,7 @@ export interface Cup {
   totalUses: number;
   currentUserId?: string; // User đang mượn
   currentTransactionId?: string;
+  storeId?: string; // ID của store hiện tại
 }
 
 // Transaction Types

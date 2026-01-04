@@ -1,5 +1,7 @@
 # 🌱 **CupSipSmart** - Smart Cup Sharing System
 
+![Qtus](https://files.catbox.moe/5smts4.jpg)
+
 > **Hệ thống quản lý mượn trả ly tái sử dụng thông minh cho Gen Z**  
 > Giảm thiểu rác thải nhựa một lần, bảo vệ môi trường, kiếm điểm xanh!
 
@@ -352,6 +354,8 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
+URL_APP=https://cupsipmart-nqt-uef-edu.vercel.app/
+
 # App Config
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_DEPOSIT_AMOUNT=20000
@@ -396,6 +400,11 @@ npm run start
 ```
 
 ---
+
+##  **Login Admin**
+ADMIN_KEY=qtusadmin@gmail.com
+ADMIN_PASSWORD=qtusdev
+
 
 ## 📁 **CẤU TRÚC DỰ ÁN**
 
@@ -541,7 +550,7 @@ MIT License
 ## 📞 **SUPPORT**
 
 - **Email:** support@cupsipsmart.vn
-- **Website:** https://cupsipsmart.vn
+- **Website:** https://cupsipmart-nqt-uef-edu.vercel.app/
 - **Facebook:** /CupSipSmart
 - **Hotline:** 1900 xxxx
 

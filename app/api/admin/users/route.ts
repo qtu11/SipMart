@@ -25,12 +25,11 @@ export async function GET(request: NextRequest) {
       users,
       total: users.length,
     });
-  } catch (error: any) {
-    console.error('Get users error:', error);
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Internal server error',
+        error: err.message || 'Internal server error',
         users: [],
       },
       { status: 500 }

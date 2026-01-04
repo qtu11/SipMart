@@ -1,56 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { COLLECTIONS } from '@/lib/firebase/collections';
-import type { LeaderboardEntry } from '@/lib/types';
+import {
+  getGlobalLeaderboard,
+  getLeaderboardByRank,
+  getUserRank,
+  getLeaderboardWithUser,
+  getFriendsLeaderboard,
+} from '@/lib/supabase/leaderboard';
 
-// Bảng xếp hạng sống xanh
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const top = parseInt(searchParams.get('top') || '100');
-    const department = searchParams.get('department'); // Filter theo khoa
+    const type = searchParams.get('type') || 'global'; // global, friends, rank
+    const userId = searchParams.get('userId');
+    const rankLevel = searchParams.get('rankLevel');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    let q = query(
-      collection(db, COLLECTIONS.USERS),
-      orderBy('greenPoints', 'desc'),
-      limit(top)
-    );
+    let result;
 
-    const snapshot = await getDocs(q);
-    const entries: LeaderboardEntry[] = [];
-    let rank = 1;
+    switch (type) {
+      case 'friends':
+        if (!userId) {
+          return NextResponse.json(
+            { error: 'userId required for friends leaderboard' },
+            { status: 400 }
+          );
+        }
+        result = await getFriendsLeaderboard(userId);
+        break;
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      
-      // Filter theo department nếu có
-      if (department && data.department !== department) {
-        return;
-      }
+      case 'rank':
+        if (!rankLevel) {
+          return NextResponse.json(
+            { error: 'rankLevel required for rank leaderboard' },
+            { status: 400 }
+          );
+        }
+        result = await getLeaderboardByRank(rankLevel, limit);
+        break;
 
-      entries.push({
-        userId: doc.id,
-        displayName: data.displayName || data.email?.split('@')[0] || 'Anonymous',
-        avatar: data.avatar,
-        greenPoints: data.greenPoints || 0,
-        totalCupsSaved: data.totalCupsSaved || 0,
-        rank: rank++,
-        department: data.department,
-        class: data.class,
-      });
-    });
+      case 'user':
+        if (!userId) {
+          return NextResponse.json(
+            { error: 'userId required for user rank' },
+            { status: 400 }
+          );
+        }
+        const userRankData = await getUserRank(userId);
+        return NextResponse.json({
+          success: true,
+          ...userRankData,
+        });
+
+      case 'with_user':
+        if (!userId) {
+          return NextResponse.json(
+            { error: 'userId required' },
+            { status: 400 }
+          );
+        }
+        const leaderboardWithUser = await getLeaderboardWithUser(userId, limit);
+        return NextResponse.json({
+          success: true,
+          ...leaderboardWithUser,
+        });
+
+      case 'global':
+      default:
+        result = await getGlobalLeaderboard(limit);
+        break;
+    }
 
     return NextResponse.json({
-      leaderboard: entries,
-      total: entries.length,
+      success: true,
+      leaderboard: result,
+      type,
     });
-  } catch (error: any) {
-    console.error('Leaderboard error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

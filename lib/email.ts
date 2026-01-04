@@ -17,11 +17,7 @@ export interface EmailContent {
 export async function sendEmail(content: EmailContent): Promise<{ success: boolean; error?: string }> {
   // Nếu không có API key, log ra console (development mode)
   if (!resend) {
-    console.log('📧 [DEV MODE] Email would be sent:', {
-      to: content.to,
-      subject: content.subject,
-    });
-    console.log('📧 [DEV MODE] Email HTML:', content.html.substring(0, 200) + '...');
+    // console.log('Email service not configured (DEV mode)');
     return { success: true };
   }
 
@@ -35,15 +31,10 @@ export async function sendEmail(content: EmailContent): Promise<{ success: boole
     });
 
     if (error) {
-      console.error('Resend error:', error);
       return { success: false, error: error.message };
-    }
-
-    console.log('✅ Email sent successfully:', data?.id);
-    return { success: true };
-  } catch (error: any) {
-    console.error('Send email error:', error);
-    return { success: false, error: error.message || 'Failed to send email' };
+    } return { success: true };
+  } catch (error: unknown) {
+    const err = error as Error; return { success: false, error: err.message || 'Failed to send email' };
   }
 }
 

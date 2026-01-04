@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { toggleLikePost } from '@/lib/firebase/greenFeed';
+import { toggleLikePost } from '@/lib/supabase/feed';
 
 /**
  * API để like/unlike một post
@@ -23,12 +23,11 @@ export async function POST(request: NextRequest) {
       isLiked,
       message: isLiked ? 'Post liked' : 'Post unliked',
     });
-  } catch (error: any) {
-    console.error('Toggle like error:', error);
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to toggle like',
+        error: err.message || 'Failed to toggle like',
       },
       { status: 500 }
     );

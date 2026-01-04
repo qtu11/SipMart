@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStories, getUserStories } from '@/lib/firebase/stories';
-import { getFriends } from '@/lib/firebase/friends';
+import { getStories, getUserStories } from '@/lib/supabase/stories';
+import { getFriends } from '@/lib/supabase/friends';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,19 +24,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Lấy stories của bạn bè và user hiện tại
-    const friends = await getFriends(userId);
-    const friendIds = friends.map(f => f.userId);
-    const stories = await getStories(userId, friendIds);
+    // Lấy stories của user hiện tại (getStories returns all non-expired stories)
+    const stories = await getStories(userId);
 
     return NextResponse.json({
       success: true,
       stories,
     });
-  } catch (error: any) {
-    console.error('Get stories error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

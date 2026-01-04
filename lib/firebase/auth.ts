@@ -25,26 +25,18 @@ export async function signUpWithEmail(
 
     // Nếu là admin email, tạo/update admin document
     if (isAdminEmail(user.email || email)) {
-      try {
-        console.log('🔐 Admin email detected during signup, creating admin document...');
-        await createOrUpdateAdmin(
+      try {        await createOrUpdateAdmin(
           user.uid,
           user.email || email,
           displayName || email.split('@')[0],
           'super_admin'
-        );
-        console.log('✅ Admin document created successfully');
-      } catch (adminError: any) {
-        console.error('❌ Error creating/updating admin document:', adminError);
-      }
+        );      } catch (adminError: any) {      }
     }
 
     // Tạo user document trong Firestore
     try {
       await createUser(user.uid, email, displayName, studentId);
-    } catch (userError: any) {
-      console.error('Error creating user document:', userError);
-      // Nếu là lỗi permission hoặc network, throw lại để frontend biết
+    } catch (userError: any) {      // Nếu là lỗi permission hoặc network, throw lại để frontend biết
       if (userError.code === 'permission-denied' || userError.code === 'unavailable') {
         throw new Error('Không thể tạo tài khoản. Vui lòng thử lại sau.');
       }
@@ -52,9 +44,8 @@ export async function signUpWithEmail(
     }
 
     return user;
-  } catch (error: any) {
-    console.error('Sign up error:', error);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 
@@ -73,9 +64,7 @@ export async function signInWithEmail(email: string, password: string) {
           user.displayName || email.split('@')[0],
           'super_admin'
         );
-      } catch (adminError: any) {
-        console.error('Error creating/updating admin document:', adminError);
-      }
+      } catch (adminError: any) {      }
     }
 
     // Đảm bảo user document tồn tại trong Supabase
@@ -85,15 +74,12 @@ export async function signInWithEmail(email: string, password: string) {
         // Tạo user document nếu chưa có
         await createUser(user.uid, user.email || email, user.displayName || undefined);
       }
-    } catch (userError: any) {
-      console.error('Error checking/creating user document:', userError);
-      // Không throw error để user vẫn có thể đăng nhập
+    } catch (userError: any) {      // Không throw error để user vẫn có thể đăng nhập
     }
 
     return user;
-  } catch (error: any) {
-    console.error('Sign in error:', error);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 

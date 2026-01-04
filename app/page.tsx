@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
+import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import ChatAI from '@/components/ChatAI';
 import Scene3D from '@/components/Scene3D';
 import ProfileMenu from '@/components/ProfileMenu';
@@ -24,7 +24,7 @@ export default function Home() {
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      
+
       if (currentUser) {
         // Fetch user stats
         fetch(`/api/wallet?userId=${(currentUser as any).id || (currentUser as any).user_id}`)
@@ -71,7 +71,7 @@ export default function Home() {
       </div>
 
       {/* Header */}
-      <header className="relative bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
+      <header className="relative z-50 bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}

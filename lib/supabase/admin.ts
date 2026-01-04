@@ -21,21 +21,18 @@ const ADMIN_EMAILS = ['qtusadmin@gmail.com', 'qtusdev@gmail.com'];
  */
 export function isAdminEmail(email: string): boolean {
   const normalizedEmail = email.toLowerCase().trim();
-  
+
   // Check env first
   const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
   if (adminKey) {
     const adminKeys = adminKey.split(',').map(k => k.trim().toLowerCase());
     if (adminKeys.includes(normalizedEmail)) {
-      console.log('🔐 Admin email (from env):', normalizedEmail, '→ ✅ Admin');
       return true;
     }
   }
-  
+
   // Fallback to hardcoded list
-  const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
-  console.log('🔐 Checking admin email:', normalizedEmail, '→', isAdmin ? '✅ Admin' : '❌ Not admin');
-  return isAdmin;
+  const isAdmin = ADMIN_EMAILS.includes(normalizedEmail); return isAdmin;
 }
 
 /**
@@ -67,7 +64,6 @@ export async function getAdmin(userId: string): Promise<Admin | null> {
       created_at: new Date(data.created_at),
     };
   } catch (error) {
-    console.error('Error getting admin:', error);
     return null;
   }
 }
@@ -126,3 +122,15 @@ export async function checkIsAdmin(userId: string, email: string): Promise<boole
   return admin !== null;
 }
 
+
+/**
+ * Helper để check admin cho API Routes
+ * Verify headers: x-admin-email, x-admin-password
+ */
+export async function checkAdminApi(req: Request): Promise<boolean> {
+  const email = req.headers.get('x-admin-email');
+  const password = req.headers.get('x-admin-password');
+
+  if (!email || !password) return false;
+  return verifyAdmin(email, password);
+}

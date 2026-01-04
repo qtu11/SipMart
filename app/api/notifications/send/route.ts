@@ -30,20 +30,16 @@ export async function POST(request: NextRequest) {
     // TODO: Gửi push notification qua FCM
     // FCM vẫn được dùng cho push notifications
     // Notification đã được lưu vào Supabase để hiển thị real-time
-
-    console.log('Notification created:', notificationId);
-
     return NextResponse.json({
       success: true,
       notificationId,
       message: 'Notification created successfully',
     });
-  } catch (error: any) {
-    console.error('Send notification error:', error);
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to send notification',
+        error: err.message || 'Failed to send notification',
       },
       { status: 500 }
     );

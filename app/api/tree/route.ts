@@ -15,10 +15,9 @@ export async function GET(request: NextRequest) {
 
     const tree = await getVirtualTree(userId);
     return NextResponse.json(tree);
-  } catch (error: any) {
-    console.error('Get tree error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
@@ -43,10 +42,9 @@ export async function POST(request: NextRequest) {
       success: true,
       tree,
     });
-  } catch (error: any) {
-    console.error('Water tree error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }

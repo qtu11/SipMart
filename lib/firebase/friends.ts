@@ -48,9 +48,7 @@ export async function findUserByStudentId(studentId: string): Promise<{ userId: 
       avatar: data.avatar,
       email: data.email,
     };
-  } catch (error) {
-    console.error('Error finding user by studentId:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -81,9 +79,8 @@ export async function sendFriendRequest(fromUserId: string, toUserId: string): P
     });
 
     return requestId;
-  } catch (error: any) {
-    console.error('Error sending friend request:', error);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 
@@ -132,9 +129,8 @@ export async function acceptFriendRequest(requestId: string, currentUserId: stri
     await updateDoc(user2Ref, {
       friends: arrayUnion(requestData.fromUserId),
     });
-  } catch (error: any) {
-    console.error('Error accepting friend request:', error);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 
@@ -156,9 +152,8 @@ export async function rejectFriendRequest(requestId: string, currentUserId: stri
     await updateDoc(requestRef, {
       status: 'rejected',
     });
-  } catch (error: any) {
-    console.error('Error rejecting friend request:', error);
-    throw error;
+  } catch (error: unknown) {
+    const err = error as Error;    throw error;
   }
 }
 
@@ -180,9 +175,7 @@ export async function getFriendRequests(userId: string, type: 'sent' | 'received
         createdAt: data.createdAt?.toDate() || new Date(),
       } as FriendRequest;
     });
-  } catch (error) {
-    console.error('Error getting friend requests:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -208,9 +201,7 @@ export async function getFriends(userId: string): Promise<Array<{ userId: string
     );
 
     return friendsData.filter(f => f !== null) as Array<{ userId: string; displayName?: string; avatar?: string }>;
-  } catch (error) {
-    console.error('Error getting friends:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -222,9 +213,7 @@ export async function checkFriendship(userId1: string, userId2: string): Promise
 
     const friends = (user1 as any).friends || [];
     return friends.includes(userId2);
-  } catch (error) {
-    console.error('Error checking friendship:', error);
-    return false;
+  } catch (error) {    return false;
   }
 }
 
@@ -241,9 +230,7 @@ async function checkFriendRequest(fromUserId: string, toUserId: string): Promise
 
     const snapshot = await getDocs(q);
     return !snapshot.empty;
-  } catch (error) {
-    console.error('Error checking friend request:', error);
-    return false;
+  } catch (error) {    return false;
   }
 }
 
@@ -267,9 +254,7 @@ export async function removeFriend(userId1: string, userId2: string): Promise<vo
     await updateDoc(friendshipRef, {
       deleted: true,
     });
-  } catch (error) {
-    console.error('Error removing friend:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 

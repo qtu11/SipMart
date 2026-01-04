@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         if (isAdminEmail(email)) {
           try {
             await createOrUpdateAdmin(userId, email, displayName, 'super_admin');
-            console.log('✅ Admin document created/updated for OAuth user');
+            
           } catch (adminError) {
             console.error('❌ Error creating admin:', adminError);
             // Continue even if admin creation fails
@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
           const { getUser } = await import('@/lib/supabase/users');
           const existingUser = await getUser(userId);
           if (!existingUser) {
-            console.log('🔵 Creating user document for OAuth user...');
+            
             await createUser(userId, email, displayName);
-            console.log('✅ User document created successfully');
+            
           } else {
-            console.log('✅ User document already exists');
+            
           }
         } catch (userError: any) {
           console.error('❌ Error creating user:', userError);
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
 
         // Redirect based on admin status
         if (isAdminEmail(email)) {
-          console.log('🔐 Admin OAuth login, redirecting to /admin');
+          
           return NextResponse.redirect(new URL('/admin', requestUrl.origin));
         } else {
-          console.log('✅ Regular user OAuth login, redirecting to /');
+          
           return NextResponse.redirect(new URL('/', requestUrl.origin));
         }
       } else {

@@ -32,9 +32,7 @@ export async function createNotification(notificationData: NotificationData): Pr
     if (error) throw error;
 
     return data.notification_id;
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -57,9 +55,7 @@ export async function getUserNotifications(userId: string, limit?: number): Prom
 
     if (error) throw error;
     return data || [];
-  } catch (error) {
-    console.error('Error getting user notifications:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -74,9 +70,7 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
       .eq('notification_id', notificationId);
 
     if (error) throw error;
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 
@@ -91,9 +85,7 @@ export async function deleteNotification(notificationId: string): Promise<void> 
       .eq('notification_id', notificationId);
 
     if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting notification:', error);
-    throw error;
+  } catch (error) {    throw error;
   }
 }
 

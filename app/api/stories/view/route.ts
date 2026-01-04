@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { viewStory, toggleStoryLike } from '@/lib/firebase/stories';
+import { viewStory } from '@/lib/supabase/stories';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,24 +22,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'like') {
-      const isLiked = await toggleStoryLike(storyId, userId);
-      return NextResponse.json({
-        success: true,
-        isLiked,
-        message: isLiked ? 'Story liked' : 'Story unliked',
-      });
+      // Story like functionality not implemented yet
+      // Can be added later if needed
+      return NextResponse.json(
+        { error: 'Story like feature not implemented' },
+        { status: 501 }
+      );
     }
 
     return NextResponse.json(
       { error: 'Invalid action' },
       { status: 400 }
     );
-  } catch (error: any) {
-    console.error('Story action error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: err.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

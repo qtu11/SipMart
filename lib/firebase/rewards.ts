@@ -39,9 +39,7 @@ export async function createReward(data: Omit<Reward, 'rewardId' | 'createdAt'>)
     });
 
     return { success: true, rewardId };
-  } catch (error) {
-    console.error('Error creating reward:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -66,9 +64,7 @@ export async function getAllRewards(category?: RewardCategory): Promise<Reward[]
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Reward);
-  } catch (error) {
-    console.error('Error getting rewards:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -77,9 +73,7 @@ export async function getRewardById(rewardId: string): Promise<Reward | null> {
     const docRef = doc(db, COLLECTIONS.REWARDS, rewardId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as Reward) : null;
-  } catch (error) {
-    console.error('Error getting reward:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -90,9 +84,7 @@ export async function updateRewardStock(rewardId: string, quantity: number) {
       stock: increment(quantity),
     });
     return { success: true };
-  } catch (error) {
-    console.error('Error updating stock:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -162,9 +154,7 @@ export async function claimReward(userId: string, rewardId: string) {
       claim,
       remainingPoints: currentPoints - reward.pointsCost,
     };
-  } catch (error) {
-    console.error('Error claiming reward:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -190,9 +180,7 @@ export async function getUserRewardClaims(userId: string): Promise<RewardClaim[]
     );
 
     return claims;
-  } catch (error) {
-    console.error('Error getting user claims:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -220,9 +208,7 @@ export async function updateClaimStatus(
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {
-    console.error('Error updating claim status:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -248,9 +234,7 @@ export async function getAllRewardClaims(): Promise<RewardClaim[]> {
     );
 
     return claims;
-  } catch (error) {
-    console.error('Error getting all claims:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 

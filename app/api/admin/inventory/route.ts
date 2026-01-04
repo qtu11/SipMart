@@ -10,10 +10,9 @@ export async function GET(request: Request) {
   try {
     const alerts = await getInventoryAlerts();
     return NextResponse.json({ success: true, alerts });
-  } catch (error: any) {
-    console.error('Error in GET /api/admin/inventory:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -40,10 +39,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/admin/inventory:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -63,10 +61,9 @@ export async function PUT(request: Request) {
 
     const result = await updateInventoryTransfer(transferId, status);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in PUT /api/admin/inventory:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

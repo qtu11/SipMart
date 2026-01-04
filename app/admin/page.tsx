@@ -6,7 +6,7 @@ import { BarChart3, Package, Users, AlertTriangle, Plus, Download } from 'lucide
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
-import { checkIsAdmin, isAdminEmail } from '@/lib/supabase/admin';
+import { isAdminEmail } from '@/lib/supabase/admin';
 import toast from 'react-hot-toast';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   const [cupForm, setCupForm] = useState({
     count: 10,
     material: 'pp_plastic' as 'pp_plastic' | 'bamboo_fiber',
-    storeId: 'store1',
+    storeId: '',
   });
   const router = useRouter();
 
@@ -66,7 +66,16 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       setAnalytics(data);
-    } catch (error) {
+
+      // Auto-select first store if none selected
+      if (data.storeDistribution?.length > 0) {
+        setCupForm(prev => ({
+          ...prev,
+          storeId: prev.storeId || data.storeDistribution[0].storeId
+        }));
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error fetching analytics:', error);
       toast.error('Không thể tải dữ liệu analytics');
     } finally {
@@ -80,51 +89,32 @@ export default function AdminDashboard() {
     // Check admin access
     const checkAdminAccess = async (user: any) => {
       if (!user) {
-        console.log('No user found, redirecting to login');
         router.push('/auth/login');
         return;
       }
 
       try {
         const userEmail = user.email || '';
-        const userId = user.id || user.user_id;
-        console.log('🔍 Checking admin access for:', userEmail, 'UID:', userId);
-        
-        // Check email trước (nhanh hơn)
+
+        // Use local check only for UI access
         if (isAdminEmail(userEmail)) {
-          console.log('✅ Email is admin email, granting access');
           setAuthorized(true);
           setLoading(false);
           fetchAnalytics();
           interval = setInterval(fetchAnalytics, 30000); // Refresh mỗi 30s
           return;
         }
-        
-        // Nếu không phải admin email, check Supabase
-        console.log('⚠️ Email is not in admin list, checking Supabase...');
-        const isAdmin = await checkIsAdmin(userId, userEmail);
-        if (!isAdmin) {
-          console.log('❌ User is not admin, redirecting...');
-          toast.error('Bạn không có quyền truy cập trang admin');
-          router.push('/');
-          return;
-        }
-        
-        console.log('✅ User is admin from Supabase, granting access');
-        setAuthorized(true);
-        setLoading(false);
-        fetchAnalytics();
-        interval = setInterval(fetchAnalytics, 30000); // Refresh mỗi 30s
-      } catch (error) {
+
+        toast.error('Bạn không có quyền truy cập trang admin');
+        router.push('/');
+      } catch (error: unknown) {
         console.error('❌ Error checking admin access:', error);
-        toast.error('Lỗi khi kiểm tra quyền truy cập');
         setLoading(false);
       }
     };
 
     // Lắng nghe thay đổi auth state (đợi auth load xong)
     const unsubscribe = onAuthChange(async (user) => {
-      console.log('🔔 Auth state changed, user:', user?.email);
       await checkAdminAccess(user);
     });
 
@@ -137,7 +127,7 @@ export default function AdminDashboard() {
   const handleCreateCups = async () => {
     try {
       setIsCreating(true);
-      
+
       // Use admin credentials from env
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
@@ -160,26 +150,64 @@ export default function AdminDashboard() {
       });
 
       const data = await res.json();
-      
+
       if (data.success) {
         toast.success(`Đã tạo ${cupForm.count} mã QR thành công`);
-        
+
         // Lưu QR codes và hiển thị modal
         if (data.qrCodes && data.qrCodes.length > 0) {
           setCreatedQRCodes(data.qrCodes);
           setShowQRCodes(true);
         }
-        
+
         setShowCreateCups(false);
         fetchAnalytics();
       } else {
         toast.error(data.error || 'Không thể tạo mã QR');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Create cups error:', error);
-      toast.error(error.message || 'Lỗi khi tạo mã QR');
+      toast.error(err.message || 'Lỗi khi tạo mã QR');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const [loadingStore, setLoadingStore] = useState<string | null>(null);
+
+  const viewStoreCups = async (storeId: string) => {
+    try {
+      setLoadingStore(storeId);
+      // Use admin credentials from env
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+      const email = adminKey.split(',')[0].trim();
+
+      const res = await fetch(`/api/admin/cups?storeId=${storeId}`, {
+        headers: {
+          'x-admin-email': email,
+          'x-admin-password': adminPassword,
+        },
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.cups && data.cups.length > 0) {
+          setCreatedQRCodes(data.cups);
+          setShowQRCodes(true);
+        } else {
+          toast('Kho này chưa có ly nào (hoặc dữ liệu chưa được cập nhật)', { icon: 'ℹ️' });
+        }
+      } else {
+        toast.error(data.error || 'Không thể tải danh sách ly');
+      }
+    } catch (error) {
+      console.error('Error fetching store cups:', error);
+      toast.error('Lỗi kết nối');
+    } finally {
+      setLoadingStore(null);
     }
   };
 
@@ -218,71 +246,71 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         {analytics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-4 shadow-soft"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="w-5 h-5 text-primary-500" />
-              <span className="text-sm text-dark-500">Ly đã cứu</span>
-            </div>
-            <div className="text-2xl font-bold text-primary-600">
-              {analytics?.totalCupsSaved?.toLocaleString('vi-VN') || '0'}
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl p-4 shadow-soft"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="w-5 h-5 text-primary-500" />
+                <span className="text-sm text-dark-500">Ly đã cứu</span>
+              </div>
+              <div className="text-2xl font-bold text-primary-600">
+                {analytics?.totalCupsSaved?.toLocaleString('vi-VN') || '0'}
+              </div>
+            </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl p-4 shadow-soft"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-5 h-5 text-primary-500" />
-              <span className="text-sm text-dark-500">Người dùng</span>
-            </div>
-            <div className="text-2xl font-bold text-primary-600">
-              {analytics?.totalUsers || 0}
-            </div>
-            <div className="text-xs text-dark-400">
-              {analytics?.activeUsers || 0} hoạt động
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl p-4 shadow-soft"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-primary-500" />
+                <span className="text-sm text-dark-500">Người dùng</span>
+              </div>
+              <div className="text-2xl font-bold text-primary-600">
+                {analytics?.totalUsers || 0}
+              </div>
+              <div className="text-xs text-dark-400">
+                {analytics?.activeUsers || 0} hoạt động
+              </div>
+            </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-4 shadow-soft"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="w-5 h-5 text-primary-500" />
-              <span className="text-sm text-dark-500">Giao dịch</span>
-            </div>
-            <div className="text-2xl font-bold text-primary-600">
-              {analytics?.ongoingTransactions || 0}
-            </div>
-            <div className="text-xs text-dark-400">
-              {analytics?.overdueTransactions || 0} quá hạn
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-2xl p-4 shadow-soft"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-5 h-5 text-primary-500" />
+                <span className="text-sm text-dark-500">Giao dịch</span>
+              </div>
+              <div className="text-2xl font-bold text-primary-600">
+                {analytics?.ongoingTransactions || 0}
+              </div>
+              <div className="text-xs text-dark-400">
+                {analytics?.overdueTransactions || 0} quá hạn
+              </div>
+            </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-4 shadow-soft"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              <span className="text-sm text-dark-500">Nhựa giảm</span>
-            </div>
-            <div className="text-2xl font-bold text-primary-600">
-              {analytics?.totalPlasticReduced ? ((analytics.totalPlasticReduced / 1000).toFixed(1)) : '0.0'}kg
-            </div>
-          </motion.div>
-        </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-2xl p-4 shadow-soft"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <span className="text-sm text-dark-500">Nhựa giảm</span>
+              </div>
+              <div className="text-2xl font-bold text-primary-600">
+                {analytics?.totalPlasticReduced ? ((analytics.totalPlasticReduced / 1000).toFixed(1)) : '0.0'}kg
+              </div>
+            </motion.div>
+          </div>
         )}
 
         {/* Create QR Codes */}
@@ -310,6 +338,24 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, height: 'auto' }}
               className="space-y-4 pt-4 border-t border-dark-100"
             >
+              <div>
+                <label className="block text-sm text-dark-600 mb-2">
+                  Chọn kho
+                </label>
+                <select
+                  value={cupForm.storeId}
+                  onChange={(e) =>
+                    setCupForm({ ...cupForm, storeId: e.target.value })
+                  }
+                  className="w-full border border-dark-200 rounded-xl px-4 py-2 bg-dark-100 text-dark-600"
+                >
+                  {analytics?.storeDistribution?.map((store) => (
+                    <option key={store.storeId} value={store.storeId}>
+                      {store.storeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm text-dark-600 mb-2">
                   Số lượng ly
@@ -344,7 +390,7 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={handleCreateCups}
-                disabled={isCreating}
+                disabled={isCreating || !cupForm.storeId}
                 className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreating ? 'Đang tạo...' : 'Tạo mã QR'}
@@ -365,24 +411,35 @@ export default function AdminDashboard() {
           <div className="space-y-3">
             {analytics?.storeDistribution?.map((store) => {
               const lowStock = store.available < 5;
+              const isLoading = loadingStore === store.storeId;
+
               return (
                 <div
                   key={store.storeId}
-                  className={`p-4 rounded-xl border ${
-                    lowStock
-                      ? 'border-orange-300 bg-orange-50'
-                      : 'border-dark-100'
-                  }`}
+                  className={`p-4 rounded-xl border ${lowStock
+                    ? 'border-orange-300 bg-orange-50'
+                    : 'border-dark-100'
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-semibold text-dark-800">
                       {store.storeName}
                     </div>
-                    {lowStock && (
-                      <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                        Sắp hết
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {lowStock && (
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                          Sắp hết
+                        </span>
+                      )}
+
+                      <button
+                        onClick={() => viewStoreCups(store.storeId)}
+                        disabled={isLoading}
+                        className="text-xs bg-white border border-dark-200 hover:bg-dark-50 text-dark-600 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                      >
+                        {isLoading ? 'Đang tải...' : 'Chi tiết'}
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-sm">
                     <div>
@@ -415,19 +472,21 @@ export default function AdminDashboard() {
             })}
           </div>
         </motion.div>
-      </main>
+      </main >
 
       {/* QR Codes Display Modal */}
-      {showQRCodes && createdQRCodes.length > 0 && (
-        <QRCodeDisplay
-          qrCodes={createdQRCodes}
-          onClose={() => {
-            setShowQRCodes(false);
-            setCreatedQRCodes([]);
-          }}
-        />
-      )}
-    </div>
+      {
+        showQRCodes && createdQRCodes.length > 0 && (
+          <QRCodeDisplay
+            qrCodes={createdQRCodes}
+            onClose={() => {
+              setShowQRCodes(false);
+              setCreatedQRCodes([]);
+            }}
+          />
+        )
+      }
+    </div >
   );
 }
 

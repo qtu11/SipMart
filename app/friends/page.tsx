@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Search, UserPlus, Check, X, Users, UserCheck, ArrowLeft, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/firebase/auth';
+import { getCurrentUser } from '@/lib/supabase/auth';
 import toast from 'react-hot-toast';
 
 interface Friend {
@@ -36,12 +36,15 @@ export default function FriendsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-    setUserId((user as any).id || (user as any).user_id);
+    const checkUser = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+      setUserId((user as any).id || (user as any).user_id);
+    };
+    checkUser();
   }, [router]);
 
   const loadFriendRequests = useCallback(async () => {
@@ -67,7 +70,8 @@ export default function FriendsPage() {
         );
         setFriendRequests(requestsWithUsers);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error loading friend requests:', error);
     }
   }, [userId]);
@@ -80,7 +84,8 @@ export default function FriendsPage() {
       if (data.success) {
         setFriends(data.friends);
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error loading friends:', error);
     }
   }, [userId]);
@@ -114,7 +119,8 @@ export default function FriendsPage() {
         toast.error('Không tìm thấy người dùng');
         setSearchResult(null);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi tìm kiếm');
       setSearchResult(null);
     } finally {
@@ -142,7 +148,8 @@ export default function FriendsPage() {
       } else {
         toast.error(data.error || 'Không thể gửi lời mời');
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi gửi lời mời');
     } finally {
       setLoading(false);
@@ -169,7 +176,8 @@ export default function FriendsPage() {
       } else {
         toast.error(data.error || 'Không thể chấp nhận');
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       toast.error('Lỗi khi chấp nhận');
     } finally {
       setLoading(false);
@@ -207,22 +215,20 @@ export default function FriendsPage() {
         <div className="flex gap-4 mb-6 bg-white rounded-2xl p-2 shadow-soft">
           <button
             onClick={() => setActiveTab('search')}
-            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all ${
-              activeTab === 'search'
-                ? 'bg-primary-500 text-white'
-                : 'text-dark-600 hover:bg-primary-50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all ${activeTab === 'search'
+              ? 'bg-primary-500 text-white'
+              : 'text-dark-600 hover:bg-primary-50'
+              }`}
           >
             <Search className="w-4 h-4 inline mr-2" />
             Tìm kiếm
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all relative ${
-              activeTab === 'requests'
-                ? 'bg-primary-500 text-white'
-                : 'text-dark-600 hover:bg-primary-50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all relative ${activeTab === 'requests'
+              ? 'bg-primary-500 text-white'
+              : 'text-dark-600 hover:bg-primary-50'
+              }`}
           >
             <UserPlus className="w-4 h-4 inline mr-2" />
             Lời mời
@@ -234,11 +240,10 @@ export default function FriendsPage() {
           </button>
           <button
             onClick={() => setActiveTab('friends')}
-            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all ${
-              activeTab === 'friends'
-                ? 'bg-primary-500 text-white'
-                : 'text-dark-600 hover:bg-primary-50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-xl font-semibold transition-all ${activeTab === 'friends'
+              ? 'bg-primary-500 text-white'
+              : 'text-dark-600 hover:bg-primary-50'
+              }`}
           >
             <UserCheck className="w-4 h-4 inline mr-2" />
             Bạn bè ({friends.length})

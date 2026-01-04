@@ -20,10 +20,9 @@ export async function GET(request: Request) {
 
     const achievements = await getUserAchievements(userId);
     return NextResponse.json({ success: true, achievements });
-  } catch (error: any) {
-    console.error('Error in GET /api/achievements/user:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }
@@ -54,10 +53,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error in POST /api/achievements/user:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
+      { success: false, error: err.message },
       { status: 500 }
     );
   }

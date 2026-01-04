@@ -51,9 +51,7 @@ export async function addPaymentMethod(
     }
 
     return { success: true, method };
-  } catch (error) {
-    console.error('Error adding payment method:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -67,9 +65,7 @@ export async function getUserPaymentMethods(userId: string): Promise<PaymentMeth
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as PaymentMethod);
-  } catch (error) {
-    console.error('Error getting payment methods:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -93,9 +89,7 @@ export async function setDefaultPaymentMethod(userId: string, methodId: string) 
     }
 
     return { success: false, error: 'Payment method not found' };
-  } catch (error) {
-    console.error('Error setting default payment method:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -113,9 +107,7 @@ async function setOtherMethodsNotDefault(userId: string, exceptId: string) {
       .map(doc => updateDoc(doc.ref, { isDefault: false }));
 
     await Promise.all(updates);
-  } catch (error) {
-    console.error('Error unsetting other defaults:', error);
-  }
+  } catch (error) {  }
 }
 
 export async function deletePaymentMethod(userId: string, methodId: string) {
@@ -134,9 +126,7 @@ export async function deletePaymentMethod(userId: string, methodId: string) {
     }
 
     return { success: false, error: 'Payment method not found' };
-  } catch (error) {
-    console.error('Error deleting payment method:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -160,9 +150,7 @@ export async function createPaymentTransaction(
     });
 
     return { success: true, transaction };
-  } catch (error) {
-    console.error('Error creating payment transaction:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -191,9 +179,7 @@ export async function getPaymentTransactions(
     }
 
     return transactions;
-  } catch (error) {
-    console.error('Error getting payment transactions:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -235,9 +221,7 @@ export async function updatePaymentTransactionStatus(
     }
 
     return { success: true };
-  } catch (error) {
-    console.error('Error updating transaction status:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -274,9 +258,7 @@ export async function createVNPayPayment(
       transactionCode,
       paymentUrl: `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=${transactionCode}`,
     };
-  } catch (error) {
-    console.error('Error creating VNPay payment:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -310,9 +292,7 @@ export async function createMoMoPayment(
       transactionCode,
       paymentUrl: `https://test-payment.momo.vn/pay/${transactionCode}`,
     };
-  } catch (error) {
-    console.error('Error creating MoMo payment:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -346,9 +326,7 @@ export async function createZaloPayPayment(
       transactionCode,
       paymentUrl: `https://sbgateway.zalopay.vn/pay/${transactionCode}`,
     };
-  } catch (error) {
-    console.error('Error creating ZaloPay payment:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -371,9 +349,7 @@ export async function setupAutoTopup(
     });
 
     return { success: true };
-  } catch (error) {
-    console.error('Error setting up auto top-up:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -406,9 +382,7 @@ export async function checkAndTriggerAutoTopup(userId: string) {
     }
 
     return { success: true, triggered: false };
-  } catch (error) {
-    console.error('Error checking auto top-up:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 

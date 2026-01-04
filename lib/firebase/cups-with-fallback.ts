@@ -10,14 +10,21 @@ import type { Cup } from '../types';
  */
 export async function createCupWithFallback(
   cupId: string,
-  material: 'pp_plastic' | 'bamboo_fiber'
+  material: 'pp_plastic' | 'bamboo_fiber',
+  storeId?: string
 ): Promise<Cup> {
   // Try Admin SDK first
   if (isAdminSDKAvailable()) {
     try {
+      // Admin SDK update usually requires separate implementation, 
+      // but for now we focus on Supabase as primary for this feature 
+      // or assume admin function is updated elsewhere.
+      // We will pass storeId if the admin function supports it, 
+      // but strictly following the plan, we update the fallback logic heavily used here.
       return await createCupAdmin(cupId, material);
-    } catch (error: any) {
-      console.warn('⚠️ Admin SDK failed, trying Supabase:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.warn('⚠️ Admin SDK failed, trying Supabase:', err.message);
     }
   }
 
@@ -37,6 +44,7 @@ export async function createCupWithFallback(
           material,
           status: 'available',
           total_uses: 0,
+          store_id: storeId, // Save store location
         })
         .select()
         .single();
@@ -49,9 +57,11 @@ export async function createCupWithFallback(
         status: data.status as 'available',
         createdAt: new Date(data.created_at),
         totalUses: data.total_uses || 0,
+        storeId: data.store_id,
       };
-    } catch (error: any) {
-      console.warn('⚠️ Supabase failed, trying client SDK:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.warn('⚠️ Supabase failed, trying client SDK:', err.message);
     }
   }
 
@@ -59,9 +69,10 @@ export async function createCupWithFallback(
   // This will work if user is authenticated
   try {
     return await createCup(cupId, material);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     throw new Error(
-      `Failed to create cup: ${error.message}. ` +
+      `Failed to create cup: ${err.message}. ` +
       `Please ensure Firebase Admin SDK is configured or user is authenticated.`
     );
   }
@@ -76,8 +87,9 @@ export async function getCupWithFallback(cupId: string): Promise<Cup | null> {
     try {
       const cup = await getCupAdmin(cupId);
       if (cup) return cup;
-    } catch (error: any) {
-      console.warn('⚠️ Admin SDK failed, trying Supabase:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.warn('⚠️ Admin SDK failed, trying Supabase:', err.message);
     }
   }
 
@@ -109,8 +121,9 @@ export async function getCupWithFallback(cupId: string): Promise<Cup | null> {
         currentUserId: data.current_user_id || undefined,
         currentTransactionId: data.current_transaction_id || undefined,
       };
-    } catch (error: any) {
-      console.warn('⚠️ Supabase failed, trying client SDK:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.warn('⚠️ Supabase failed, trying client SDK:', err.message);
     }
   }
 

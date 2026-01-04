@@ -39,9 +39,7 @@ export async function createChallenge(data: Omit<Challenge, 'challengeId' | 'cre
     });
 
     return { success: true, challengeId };
-  } catch (error) {
-    console.error('Error creating challenge:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -65,9 +63,7 @@ export async function getActiveChallenges(): Promise<Challenge[]> {
           : data.requirement,
       } as Challenge;
     });
-  } catch (error) {
-    console.error('Error getting active challenges:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -84,9 +80,7 @@ export async function getChallengeById(challengeId: string): Promise<Challenge |
         ? JSON.parse(data.requirement)
         : data.requirement,
     } as Challenge;
-  } catch (error) {
-    console.error('Error getting challenge:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -131,9 +125,7 @@ export async function joinChallenge(userId: string, challengeId: string) {
     });
 
     return { success: true, userChallenge };
-  } catch (error) {
-    console.error('Error joining challenge:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -159,9 +151,7 @@ export async function getUserChallenges(userId: string): Promise<UserChallenge[]
     );
 
     return userChallenges;
-  } catch (error) {
-    console.error('Error getting user challenges:', error);
-    return [];
+  } catch (error) {    return [];
   }
 }
 
@@ -178,9 +168,7 @@ async function getUserChallengeStatus(
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
     return snapshot.docs[0].data() as UserChallenge;
-  } catch (error) {
-    console.error('Error getting user challenge status:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
@@ -247,9 +235,7 @@ export async function updateChallengeProgress(
     }
 
     return { success: false, error: 'User challenge not found' };
-  } catch (error) {
-    console.error('Error updating challenge progress:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 
@@ -310,9 +296,7 @@ export async function checkAndUpdateChallenges(
     }
 
     return { success: true };
-  } catch (error) {
-    console.error('Error checking challenges:', error);
-    return { success: false, error };
+  } catch (error) {    return { success: false, error };
   }
 }
 

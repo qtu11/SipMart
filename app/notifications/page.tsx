@@ -53,7 +53,8 @@ export default function NotificationsPage() {
     try {
       await markAsRead(id);
       toast.success('Đã đánh dấu đã đọc');
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error marking as read:', error);
       toast.error('Có lỗi xảy ra');
     }
@@ -63,7 +64,8 @@ export default function NotificationsPage() {
     try {
       await deleteNotification(id);
       toast.success('Đã xóa thông báo');
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error('Error deleting:', error);
       toast.error('Có lỗi xảy ra');
     }

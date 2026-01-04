@@ -135,12 +135,11 @@ CupSipMart - Mượn ly, Cứu hành tinh
       success: true,
       message: 'Borrow notification email sent successfully',
     });
-  } catch (error: any) {
-    console.error('Send borrow notification error:', error);
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const err = error as Error;    return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to send email',
+        error: err.message || 'Failed to send email',
       },
       { status: 500 }
     );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { acceptFriendRequest } from '@/lib/firebase/friends';
+import { acceptFriendRequest } from '@/lib/supabase/friends';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,16 +13,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await acceptFriendRequest(requestId, userId);
+    await acceptFriendRequest(requestId);
 
     return NextResponse.json({
       success: true,
       message: 'Friend request accepted',
     });
-  } catch (error: any) {
-    console.error('Accept friend request error:', error);
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Failed to accept friend request' },
+      { error: err.message || 'Failed to accept friend request' },
       { status: 500 }
     );
   }

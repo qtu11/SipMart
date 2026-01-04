@@ -46,19 +46,11 @@ export async function createAssessment(
     const [response] = await client.createAssessment(request);
 
     // Kiểm tra token có hợp lệ không
-    if (!response.tokenProperties?.valid) {
-      console.error(
-        `CreateAssessment failed: ${response.tokenProperties?.invalidReason}`
-      );
-      return null;
+    if (!response.tokenProperties?.valid) {      return null;
     }
 
     // Kiểm tra action có khớp không
-    if (response.tokenProperties.action !== recaptchaAction) {
-      console.error(
-        `Action mismatch: expected ${recaptchaAction}, got ${response.tokenProperties.action}`
-      );
-      return null;
+    if (response.tokenProperties.action !== recaptchaAction) {      return null;
     }
 
     // Lấy risk score
@@ -66,15 +58,11 @@ export async function createAssessment(
 
     // Log reasons nếu có
     if (response.riskAnalysis?.reasons) {
-      response.riskAnalysis.reasons.forEach((reason) => {
-        console.log(`Risk reason: ${reason}`);
-      });
+      response.riskAnalysis.reasons.forEach((reason) => {      });
     }
 
     return score;
-  } catch (error) {
-    console.error('Error creating reCAPTCHA assessment:', error);
-    return null;
+  } catch (error) {    return null;
   }
 }
 
