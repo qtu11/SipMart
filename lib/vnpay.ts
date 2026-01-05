@@ -2,7 +2,16 @@
 // NO HARDCODED CREDENTIALS - All values from environment
 
 import crypto from 'crypto';
-import querystring from 'querystring';
+
+// Custom stringify function (replaces querystring.stringify)
+function stringifyParams(obj: Record<string, string | number>, encode = true): string {
+    return Object.entries(obj)
+        .map(([key, value]) => {
+            const v = String(value);
+            return encode ? `${encodeURIComponent(key)}=${encodeURIComponent(v)}` : `${key}=${v}`;
+        })
+        .join('&');
+}
 
 // Validate required environment variables at startup
 const requiredEnvVars = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
@@ -110,12 +119,12 @@ export function createVnpayUrl(params: CreateVnpayUrlParams): string {
     }
 
     const sortedParams = sortObject(vnpParams) as Record<string, string | number>;
-    const signData = querystring.stringify(sortedParams as Record<string, string>, { encode: false });
+    const signData = stringifyParams(sortedParams as Record<string, string>, false);
     const secureHash = generateSecureHash(signData, vnpayConfig.hashSecret);
 
     sortedParams['vnp_SecureHash'] = secureHash;
 
-    return `${vnpayConfig.url}?${querystring.stringify(sortedParams as Record<string, string>, { encode: true })}`;
+    return `${vnpayConfig.url}?${stringifyParams(sortedParams as Record<string, string>, true)}`;
 }
 
 export interface VnpayReturnResult {
@@ -150,7 +159,7 @@ export function verifyVnpayReturn(vnpParams: Record<string, string>): VnpayRetur
     const { vnp_SecureHash: _, vnp_SecureHashType: __, ...paramsToCheck } = vnpParams;
 
     const sortedParams = sortObject(paramsToCheck) as Record<string, string>;
-    const signData = querystring.stringify(sortedParams, { encode: false });
+    const signData = stringifyParams(sortedParams, false);
     const computedHash = generateSecureHash(signData, vnpayConfig.hashSecret);
 
     if (secureHash !== computedHash) {
