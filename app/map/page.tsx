@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { MapPin, Navigation, Search, X } from 'lucide-react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Navigation, Search, X, MapPin } from 'lucide-react';
+import { Map, Marker, Overlay } from 'pigeon-maps';
 import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 
 interface Store {
   storeId: string;
@@ -20,24 +21,22 @@ interface Store {
   distance?: number;
 }
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-};
+// UEF Location
+const UEF_LOCATION: [number, number] = [10.79508, 106.70577];
 
-// Default center: UEF - 141 Điện Biên Phủ, Phường 15, Bình Thạnh, TP.HCM
-const defaultCenter = {
-  lat: 10.796317,
-  lng: 106.702580,
-};
+// Fallback venues if API fails or empty
+const FALLBACK_VENUES = [
+  { id: 'uef', name: "UEF - 141 Điện Biên Phủ", type: "University", anchor: [10.79508, 106.70577] as [number, number], color: "#d91e18" },
+];
 
 export default function MapPage() {
   const [stores, setStores] = useState<Store[]>([]);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number]>(UEF_LOCATION);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(UEF_LOCATION);
+  const [zoom, setZoom] = useState(15);
   const router = useRouter();
 
   const fetchStores = useCallback(async () => {
@@ -45,34 +44,39 @@ export default function MapPage() {
       const res = await fetch('/api/stores');
       const data = await res.json();
 
-      if (userLocation) {
-        // Calculate distance
-        const storesWithDistance = (data.stores || []).map((store: Store) => {
-          const distance = calculateDistance(
-            userLocation.lat,
-            userLocation.lng,
-            store.gpsLocation.lat,
-            store.gpsLocation.lng
-          );
-          return { ...store, distance };
-        });
+      let fetchedStores: Store[] = data.stores || [];
 
-        // Sort by distance
-        storesWithDistance.sort((a: Store, b: Store) => (a.distance || 0) - (b.distance || 0));
-        setStores(storesWithDistance);
+      if (fetchedStores.length > 0) {
+        if (userLocation) {
+          // Calculate distance
+          fetchedStores = fetchedStores.map((store: Store) => {
+            const distance = calculateDistance(
+              userLocation[0],
+              userLocation[1],
+              store.gpsLocation.lat,
+              store.gpsLocation.lng
+            );
+            return { ...store, distance };
+          });
+          fetchedStores.sort((a: Store, b: Store) => (a.distance || 0) - (b.distance || 0));
+        }
+        setStores(fetchedStores);
       } else {
-        setStores(data.stores || []);
+        // Only use fallback if really needed, better to show empty state if DB is clean
+        // If no stores found, just log it silently
+        logger.debug('No stores found in DB');
       }
+
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error fetching stores:', error);
+      logger.error('Error fetching stores', { error });
       toast.error('Không thể tải danh sách cửa hàng');
     } finally {
       setLoading(false);
     }
   }, [userLocation]);
 
-  // Initial Setup: Auth & Geolocation (Run ONCE)
+  // Initial Setup: Auth & Geolocation
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
@@ -92,36 +96,32 @@ export default function MapPage() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
+          const location: [number, number] = [
+            position.coords.latitude,
+            position.coords.longitude,
+          ];
           setUserLocation(location);
           setMapCenter(location);
         },
         () => {
-          console.log('Using default location');
-          setUserLocation(defaultCenter);
-          setMapCenter(defaultCenter);
+          // Geolocation denied or unavailable - use default
+          setUserLocation(UEF_LOCATION);
+          setMapCenter(UEF_LOCATION);
         }
       );
-    } else {
-      setUserLocation(defaultCenter);
-      setMapCenter(defaultCenter);
     }
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [router]); // Removed fetchStores to avoid loop
+  }, [router]);
 
-  // Fetch Data Effect (Run when fetchStores changes, i.e., when userLocation changes)
   useEffect(() => {
     fetchStores();
   }, [fetchStores]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Radius of the Earth in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -141,7 +141,8 @@ export default function MapPage() {
 
   const handleMarkerClick = (store: Store) => {
     setSelectedStore(store);
-    setMapCenter(store.gpsLocation);
+    setMapCenter([store.gpsLocation.lat, store.gpsLocation.lng]);
+    setZoom(17);
   };
 
   const handleDirections = (store: Store) => {
@@ -152,23 +153,21 @@ export default function MapPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
+        <div className="text-primary-600">Đang tải bản đồ...</div>
       </div>
     );
   }
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col">
       <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
-        <h1 className="text-xl font-semibold text-dark-800">Bản đồ Eco</h1>
-        <p className="text-sm text-dark-500">Tìm điểm mượn/trả ly gần bạn</p>
+        <h1 className="text-xl font-semibold text-dark-800">Cửa hàng quanh bạn</h1>
+        <p className="text-sm text-dark-500">Tìm địa điểm đổi trà ly</p>
       </header>
 
       <div className="flex-1 relative">
         {/* Search Bar */}
-        <div className="absolute top-4 left-4 right-4 z-10 max-w-md mx-auto">
+        <div className="absolute top-4 left-4 right-4 z-20 max-w-md mx-auto">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dark-400" />
             <input
@@ -189,153 +188,109 @@ export default function MapPage() {
           </div>
         </div>
 
-        {/* Google Map */}
-        {googleMapsApiKey ? (
-          <LoadScript googleMapsApiKey={googleMapsApiKey}>
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={mapCenter}
-              zoom={14}
-              options={{
-                styles: [
-                  {
-                    featureType: 'poi',
-                    elementType: 'labels',
-                    stylers: [{ visibility: 'off' }],
-                  },
-                ],
-              }}
-            >
-              {/* User Location Marker */}
-              {userLocation && typeof window !== 'undefined' && window.google?.maps?.SymbolPath && (
-                <Marker
-                  position={userLocation}
-                  icon={{
-                    path: window.google.maps.SymbolPath.CIRCLE,
-                    scale: 8,
-                    fillColor: '#22c55e',
-                    fillOpacity: 1,
-                    strokeColor: '#fff',
-                    strokeWeight: 2,
-                  }}
-                  title="Vị trí của bạn"
-                />
-              )}
+        {/* Pigeon Map */}
+        <div className="w-full h-full min-h-[500px]">
+          <Map
+            height={800} // Ensuring full height
+            defaultCenter={UEF_LOCATION}
+            center={mapCenter}
+            zoom={zoom}
+            onBoundsChanged={({ center, zoom }) => {
+              setMapCenter(center);
+              setZoom(zoom);
+            }}
+          >
+            {/* User Marker */}
+            <Marker
+              anchor={userLocation}
+              payload="user"
+              width={40}
+              color="#22c55e"
+            />
 
-              {/* Store Markers */}
-              {filteredStores.map((store) => (
-                <Marker
-                  key={store.storeId}
-                  position={store.gpsLocation}
-                  onClick={() => handleMarkerClick(store)}
-                  title={store.name}
-                />
-              ))}
+            {/* Store Markers */}
+            {filteredStores.map((store) => (
+              <Marker
+                key={store.storeId}
+                width={40}
+                anchor={[store.gpsLocation.lat, store.gpsLocation.lng]}
+                color="#ef4444" // Red for stores
+                onClick={() => handleMarkerClick(store)}
+              />
+            ))}
 
-              {/* Info Window */}
-              {selectedStore && (
-                <InfoWindow
-                  position={selectedStore.gpsLocation}
-                  onCloseClick={() => setSelectedStore(null)}
-                >
-                  <div className="p-2 min-w-[200px]">
-                    <h3 className="font-bold text-lg text-dark-800 mb-2">{selectedStore.name}</h3>
-                    <p className="text-sm text-dark-600 mb-2">{selectedStore.address}</p>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-xs text-dark-400 mb-1">Ly có sẵn</p>
-                        <p className="text-lg font-bold text-primary-600">
-                          {selectedStore.cupInventory.available}/{selectedStore.cupInventory.total}
-                        </p>
-                      </div>
-                      {selectedStore.distance && (
-                        <div className="text-right">
-                          <p className="text-xs text-dark-400 mb-1">Khoảng cách</p>
-                          <p className="text-sm font-semibold text-primary-600">
-                            {selectedStore.distance < 1
-                              ? `${Math.round(selectedStore.distance * 1000)}m`
-                              : `${selectedStore.distance.toFixed(1)}km`}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDirections(selectedStore)}
-                      className="w-full bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-primary-600 transition"
-                    >
-                      <Navigation className="w-4 h-4" />
-                      Chỉ đường
+            {/* Info Window (Overlay) */}
+            {selectedStore && (
+              <Overlay anchor={[selectedStore.gpsLocation.lat, selectedStore.gpsLocation.lng]} offset={[0, 100]}>
+                <div className="bg-white p-4 rounded-xl shadow-2xl border border-primary-100 min-w-[220px] animate-in fade-in zoom-in duration-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-dark-800 text-sm pr-4">{selectedStore.name}</h3>
+                    <button onClick={() => setSelectedStore(null)} className="text-dark-400 hover:text-dark-600">
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                </InfoWindow>
-              )}
-            </GoogleMap>
-          </LoadScript>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-dark-100">
-            <div className="text-center">
-              <MapPin className="w-16 h-16 text-dark-400 mx-auto mb-4" />
-              <p className="text-dark-600 font-semibold mb-2">Google Maps API Key chưa được cấu hình</p>
-              <p className="text-sm text-dark-500">
-                Vui lòng thêm NEXT_PUBLIC_GOOGLE_MAPS_API_KEY vào .env.local
-              </p>
-            </div>
-          </div>
-        )}
 
-        {/* Stores List (Sidebar) */}
-        {filteredStores.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 max-h-[40vh] overflow-y-auto bg-white/95 backdrop-blur-md border-t border-primary-100 shadow-xl z-20">
-            <div className="p-4">
-              <h3 className="font-semibold text-dark-800 mb-3">
-                {filteredStores.length} cửa hàng {searchQuery && `cho "${searchQuery}"`}
-              </h3>
-              <div className="space-y-3">
-                {filteredStores.map((store) => (
-                  <motion.div
-                    key={store.storeId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => handleMarkerClick(store)}
-                    className={`bg-white rounded-xl p-4 shadow-md border-2 cursor-pointer transition-all ${selectedStore?.storeId === store.storeId
-                      ? 'border-primary-500 ring-2 ring-primary-200'
-                      : 'border-dark-100 hover:border-primary-300'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-dark-800 mb-1">{store.name}</h4>
-                        <p className="text-xs text-dark-500 mb-2">{store.address}</p>
-                        {store.distance && (
-                          <p className="text-sm text-primary-600 font-medium">
-                            {store.distance < 1
-                              ? `${Math.round(store.distance * 1000)}m`
-                              : `${store.distance.toFixed(1)}km`}{' '}
-                            từ bạn
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right ml-4">
-                        <p className="text-xs text-dark-400 mb-1">Ly có sẵn</p>
-                        <p className="text-lg font-bold text-primary-600">
-                          {store.cupInventory?.available || 0}/{store.cupInventory?.total || 0}
+                  <p className="text-xs text-dark-500 mb-3">{selectedStore.address}</p>
+
+                  <div className="flex items-center justify-between mb-3 bg-primary-50 p-2 rounded-lg">
+                    <div>
+                      <p className="text-[10px] uppercase text-dark-400 font-bold">Ly có sẵn</p>
+                      <p className="text-lg font-bold text-primary-600">
+                        {selectedStore.cupInventory.available}/{selectedStore.cupInventory.total}
+                      </p>
+                    </div>
+                    {selectedStore.distance && (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase text-dark-400 font-bold">Khoảng cách</p>
+                        <p className="text-sm font-semibold text-primary-600">
+                          {selectedStore.distance < 1
+                            ? `${Math.round(selectedStore.distance * 1000)}m`
+                            : `${selectedStore.distance.toFixed(1)}km`}
                         </p>
                       </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDirections(store);
-                      }}
-                      className="w-full bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-primary-600 transition mt-2"
-                    >
-                      <Navigation className="w-4 h-4" />
-                      Chỉ đường
-                    </button>
-                  </motion.div>
-                ))}
-              </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDirections(selectedStore)}
+                    className="w-full bg-primary-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-primary-600 transition flex items-center justify-center gap-2"
+                  >
+                    <Navigation className="w-3 h-3" />
+                    Chỉ đường
+                  </button>
+                </div>
+              </Overlay>
+            )}
+          </Map>
+        </div>
+
+        {/* Store List (Bottom Sheet styled) */}
+        {filteredStores.length > 0 && !selectedStore && (
+          <div className="absolute bottom-0 left-0 right-0 max-h-[35vh] overflow-y-auto bg-white/95 backdrop-blur-md border-t border-primary-100 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-10 p-4">
+            <h3 className="font-semibold text-dark-800 mb-3 text-sm uppercase tracking-wider">
+              {filteredStores.length} địa điểm gần đây
+            </h3>
+            <div className="space-y-3 pb-safe">
+              {filteredStores.map((store) => (
+                <motion.div
+                  key={store.storeId}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleMarkerClick(store)}
+                  className="bg-white rounded-xl p-3 border border-dark-100 shadow-sm flex items-center gap-3 cursor-pointer"
+                >
+                  <div className="bg-primary-50 w-10 h-10 rounded-full flex items-center justify-center text-primary-600">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-dark-800 text-sm truncate">{store.name}</h4>
+                    <p className="text-xs text-dark-500 truncate">{store.address}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded-md">
+                      {store.cupInventory?.available} ly
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         )}
@@ -343,4 +298,3 @@ export default function MapPage() {
     </div>
   );
 }
-

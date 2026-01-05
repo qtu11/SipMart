@@ -8,24 +8,19 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 // Only create client if URL is provided, otherwise return null
 function createSupabaseAdmin() {
   if (!supabaseUrl) {
-    console.warn('⚠️ NEXT_PUBLIC_SUPABASE_URL is not set. Supabase operations will fail.');
-    console.warn('💡 Please add Supabase config to .env.local. See SUPABASE_SETUP.md for details.');
-    return null;
+    throw new Error(
+      '⚠️ NEXT_PUBLIC_SUPABASE_URL is not set. Please add it to .env.local'
+    );
   }
 
-  // Prefer service role key (bypasses RLS)
-  const key = supabaseServiceRoleKey || supabaseAnonKey;
-  
-  if (!supabaseServiceRoleKey && supabaseAnonKey) {
-    console.warn('⚠️ Using ANON key instead of SERVICE_ROLE key. RLS policies will apply.');
-    console.warn('💡 For API routes, use SUPABASE_SERVICE_ROLE_KEY to bypass RLS.');
-  }
-  if (!key) {
-    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set.');
-    return null;
+  if (!supabaseServiceRoleKey) {
+    throw new Error(
+      '⚠️ SUPABASE_SERVICE_ROLE_KEY is not set. Server operations require service role key. ' +
+      'Add SUPABASE_SERVICE_ROLE_KEY to .env.local (NOT NEXT_PUBLIC_)'
+    );
   }
 
-  return createClient(supabaseUrl, key, {
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

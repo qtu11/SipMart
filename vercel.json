@@ -1,12 +1,12 @@
 {
     "crons": [
         {
-            "path": "/api/cron/refresh-rankings",
-            "schedule": "0 * * * *"
-        },
-        {
             "path": "/api/cron/check-overdue",
             "schedule": "*/15 * * * *"
+        },
+        {
+            "path": "/api/cron/refresh-rankings",
+            "schedule": "0 * * * *"
         }
     ]
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 interface Notification {
   notification_id: string;
@@ -85,7 +86,7 @@ export function useSupabaseNotifications(userId: string | null) {
 
         // Channel subscription is async, state will update automatically
       } catch (err) {
-        console.error('Error fetching notifications:', err);
+        logger.error('Error fetching notifications', { error: err });
         setError(err as Error);
         setLoading(false);
       }
@@ -116,7 +117,7 @@ export function useSupabaseNotifications(userId: string | null) {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      logger.error('Error marking notification as read', { error: err });
     }
   };
 
@@ -137,7 +138,7 @@ export function useSupabaseNotifications(userId: string | null) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
     } catch (err) {
-      console.error('Error deleting notification:', err);
+      logger.error('Error deleting notification', { error: err });
     }
   };
 

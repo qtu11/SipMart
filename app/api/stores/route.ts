@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getAllStores, getActiveStores, findNearbyStores } from '@/lib/supabase/stores';
+import { jsonResponse, errorResponse } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,14 +28,28 @@ export async function GET(request: NextRequest) {
       stores = await getAllStores();
     }
 
-    return NextResponse.json({
-      success: true,
-      stores,
-    });
+    // Transform stores to match frontend interface
+    const transformedStores = (stores || []).map((store: any) => ({
+      storeId: store.storeId,
+      name: store.name,
+      address: store.address,
+      gpsLocation: {
+        lat: store.gpsLat,
+        lng: store.gpsLng
+      },
+      cupInventory: {
+        available: store.cupAvailable || 0,
+        total: store.cupTotal || 0,
+        inUse: store.cupInUse || 0,
+        cleaning: store.cupCleaning || 0
+      },
+      partnerStatus: store.partnerStatus,
+      distance: 0 // Will be calculated on frontend
+    }));
+
+    return jsonResponse({ stores: transformedStores });
+
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { error: err.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

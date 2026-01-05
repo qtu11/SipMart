@@ -6,10 +6,12 @@ export async function POST(request: NextRequest) {
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
 
-        if (!supabaseUrl || !serviceRoleKey) {
+        if (!supabaseUrl || !serviceRoleKey || !adminEmail || !adminPassword) {
             return NextResponse.json(
-                { error: 'Missing Supabase configuration' },
+                { error: 'Missing configuration', details: 'Check env vars: SUPABASE_URL, SERVICE_ROLE_KEY, ADMIN_EMAIL, ADMIN_PASSWORD' },
                 { status: 500 }
             );
         }
@@ -22,13 +24,11 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_KEY || 'qtusadmin@gmail.com';
-        const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'qtusdev';
-        // Create user in Supabase Auth using Admin API
+        // 1. Try to create user
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: adminEmail,
             password: adminPassword,
-            email_confirm: true, // Auto-confirm email
+            email_confirm: true,
             user_metadata: {
                 display_name: 'Administrator',
                 role: 'admin'
@@ -49,14 +49,15 @@ export async function POST(request: NextRequest) {
                         { password: adminPassword, email_confirm: true }
                     );
 
-                    if (updateError) {                        return NextResponse.json(
+                    if (updateError) {
+                        return NextResponse.json(
                             { error: 'Admin exists but failed to update', details: updateError.message },
                             { status: 500 }
                         );
                     }
 
                     // Create/update in users table
-                    const { error: upsertError } = await supabaseAdmin
+                    await supabaseAdmin
                         .from('users')
                         .upsert({
                             user_id: adminUser.id,
@@ -79,17 +80,19 @@ export async function POST(request: NextRequest) {
                         success: true,
                         message: 'Admin user updated successfully',
                         userId: adminUser.id,
-                        email: adminEmail,
-                        password: adminPassword
+                        email: adminEmail
                     });
                 }
-            }            return NextResponse.json(
+            }
+
+            return NextResponse.json(
                 { error: authError.message },
                 { status: 500 }
             );
         }
 
         const userId = authData.user.id;
+
         // Create user record in users table
         const { error: userError } = await supabaseAdmin
             .from('users')
@@ -102,7 +105,9 @@ export async function POST(request: NextRequest) {
                 rank_level: 'forest'
             }, { onConflict: 'user_id' });
 
-        if (userError) {        }
+        if (userError) {
+            console.error('Failed to create user record:', userError);
+        }
 
         // Create admin record
         const { error: adminError } = await supabaseAdmin
@@ -114,18 +119,21 @@ export async function POST(request: NextRequest) {
                 role: 'super_admin'
             }, { onConflict: 'admin_id' });
 
-        if (adminError) {        }
+        if (adminError) {
+            console.error('Failed to create admin record:', adminError);
+        }
+
         return NextResponse.json({
             success: true,
             message: 'Admin user created successfully!',
             userId,
             email: adminEmail,
-            password: adminPassword,
             loginUrl: '/auth/login'
         });
 
     } catch (error: unknown) {
-    const err = error as Error;        return NextResponse.json(
+        const err = error as Error;
+        return NextResponse.json(
             { error: err.message || 'Unknown error' },
             { status: 500 }
         );
@@ -146,7 +154,11 @@ export async function GET() {
             auth: { autoRefreshToken: false, persistSession: false }
         });
 
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_KEY || 'qtusadmin@gmail.com';
+        const adminEmail = process.env.ADMIN_EMAIL;
+
+        if (!adminEmail) {
+            return NextResponse.json({ exists: false, error: 'Admin email not configured' });
+        }
 
         const { data: users } = await supabaseAdmin.auth.admin.listUsers();
         const adminUser = users?.users?.find(u => u.email === adminEmail);
@@ -157,7 +169,7 @@ export async function GET() {
             userId: adminUser?.id
         });
     } catch (error: unknown) {
-    const err = error as Error;
+        const err = error as Error;
         return NextResponse.json({ exists: false, error: err.message });
     }
 }

@@ -51,7 +51,8 @@ export async function addPaymentMethod(
     }
 
     return { success: true, method };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -65,7 +66,8 @@ export async function getUserPaymentMethods(userId: string): Promise<PaymentMeth
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as PaymentMethod);
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -89,7 +91,8 @@ export async function setDefaultPaymentMethod(userId: string, methodId: string) 
     }
 
     return { success: false, error: 'Payment method not found' };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -107,7 +110,7 @@ async function setOtherMethodsNotDefault(userId: string, exceptId: string) {
       .map(doc => updateDoc(doc.ref, { isDefault: false }));
 
     await Promise.all(updates);
-  } catch (error) {  }
+  } catch (error) { }
 }
 
 export async function deletePaymentMethod(userId: string, methodId: string) {
@@ -126,7 +129,8 @@ export async function deletePaymentMethod(userId: string, methodId: string) {
     }
 
     return { success: false, error: 'Payment method not found' };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -150,7 +154,8 @@ export async function createPaymentTransaction(
     });
 
     return { success: true, transaction };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -179,7 +184,8 @@ export async function getPaymentTransactions(
     }
 
     return transactions;
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -221,7 +227,8 @@ export async function updatePaymentTransactionStatus(
     }
 
     return { success: true };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -258,7 +265,8 @@ export async function createVNPayPayment(
       transactionCode,
       paymentUrl: `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=${transactionCode}`,
     };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -292,7 +300,8 @@ export async function createMoMoPayment(
       transactionCode,
       paymentUrl: `https://test-payment.momo.vn/pay/${transactionCode}`,
     };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -326,7 +335,8 @@ export async function createZaloPayPayment(
       transactionCode,
       paymentUrl: `https://sbgateway.zalopay.vn/pay/${transactionCode}`,
     };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -349,7 +359,8 @@ export async function setupAutoTopup(
     });
 
     return { success: true };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -382,7 +393,8 @@ export async function checkAndTriggerAutoTopup(userId: string) {
     }
 
     return { success: true, triggered: false };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 

@@ -129,20 +129,40 @@ export async function completeTransaction(
         );
     }
 
-    // Calculate refund (penalty for overdue)
-    const penaltyPerHour = 5000; // 5,000 VND per hour
-    const penalty = overdueHours * penaltyPerHour;
-    const refundAmount = Math.max(0, transaction.depositAmount - penalty);
-
-    // Calculate green points
+    // ============= GAMIFICATION: Calculate refund based on time =============
+    const { GAMIFICATION_CONFIG } = await import('@/lib/config/gamification');
     const timeDiff = returnTime.getTime() - transaction.borrowTime.getTime();
     const hoursUsed = timeDiff / (1000 * 60 * 60);
 
-    let greenPoints = 50; // Base points
+    let refundAmount = 0;
+    if (hoursUsed < 24) {
+        // < 24h: Full refund
+        refundAmount = transaction.depositAmount;
+    } else if (hoursUsed < 48) {
+        // 24-48h: Partial refund (deduct penalty)
+        const penalty = GAMIFICATION_CONFIG.deposit.late24to48Fee;
+        refundAmount = Math.max(0, transaction.depositAmount - penalty);
+    } else {
+        // > 48h: No refund
+        refundAmount = 0;
+    }
+
+    // ============= GAMIFICATION: Calculate green points =============
+    let greenPoints = 0;
+
     if (hoursUsed < 1) {
-        greenPoints = 100; // Speed returner
-    } else if (isOverdue) {
-        greenPoints = Math.max(0, 50 - (overdueHours * 10)); // Penalty
+        // Speed Returner: < 1h = x2 bonus
+        greenPoints = GAMIFICATION_CONFIG.points.speedReturner; // 200 points
+    } else if (!isOverdue) {
+        // On-time return
+        greenPoints = GAMIFICATION_CONFIG.points.returnOnTime; // 100 points
+    } else {
+        // Late return: reduced points
+        greenPoints = GAMIFICATION_CONFIG.points.returnLate; // 50 points
+        // Further penalty for very late returns
+        if (overdueHours > 24) {
+            greenPoints = 0;
+        }
     }
 
     // Update transaction
@@ -171,6 +191,50 @@ export async function completeTransaction(
         addGreenPoints(transaction.userId, greenPoints, `Returned cup from transaction ${transactionId}`),
         incrementCupsSaved(transaction.userId, 1),
     ]);
+
+    // ============= GAMIFICATION: Update Green Streak =============
+    const { updateGreenStreak, checkAndUnlockAchievements } = await import('@/lib/supabase/gamification');
+    const { streak, voucherAwarded } = await updateGreenStreak(transaction.userId, !isOverdue);
+
+    // ============= GAMIFICATION: Check achievements =============
+    const newAchievements = await checkAndUnlockAchievements(transaction.userId);
+
+    // ============= GAMIFICATION: Create EcoAction =============
+    await getAdmin()
+        .from('eco_actions')
+        .insert({
+            user_id: transaction.userId,
+            type: 'return',
+            cup_id: transaction.cupId,
+            points: greenPoints,
+            description: isOverdue
+                ? `Trả ly muộn ${overdueHours}h`
+                : hoursUsed < 1
+                    ? 'Speed Returner! ⚡'
+                    : 'Trả ly đúng hạn',
+        });
+
+    // ============= GAMIFICATION: Send notification =============
+    let notificationMessage = '';
+    if (hoursUsed < 1) {
+        notificationMessage = `🚀 Speed Returner! Bạn nhận ${greenPoints} điểm!`;
+    } else if (voucherAwarded) {
+        notificationMessage = `🎁 Green Streak ${streak}! Bạn nhận voucher giảm giá!`;
+    } else if (!isOverdue) {
+        notificationMessage = `🌱 Trả ly đúng hạn! +${greenPoints} điểm. Streak: ${streak}`;
+    } else {
+        notificationMessage = `⚠️ Trả ly muộn ${overdueHours}h. Streak đã reset.`;
+    }
+
+    await getAdmin()
+        .from('notifications')
+        .insert({
+            user_id: transaction.userId,
+            type: isOverdue ? 'warning' : 'success',
+            title: 'Trả ly thành công',
+            message: notificationMessage,
+            url: '/profile',
+        });
 
     return mapTransactionFromDb(data);
 }

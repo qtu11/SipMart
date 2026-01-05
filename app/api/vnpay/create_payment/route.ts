@@ -1,81 +1,99 @@
-import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import qs from 'qs';
-import moment from 'moment';
+// Secure VNPay Payment Creation API with Authentication
+import { NextRequest, NextResponse } from 'next/server';
+import { createVnpayUrl } from '@/lib/vnpay';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
+// Minimum and maximum amounts
+const MIN_AMOUNT = 10000;  // 10k VND
+const MAX_AMOUNT = 50000000;  // 50M VND
+
+export async function POST(request: NextRequest) {
     try {
-        const body = await req.json();
-        const { amount, bankCode, orderInfo } = body;
+        const body = await request.json();
+        const { amount, userId, bankCode, description } = body;
 
-        const ipAddr = req.headers.get('x-forwarded-for') || '127.0.0.1';
-
-        const tmnCode = process.env.NEXT_PUBLIC_VNP_TMN_CODE;
-        const secretKey = process.env.VNP_HASH_SECRET;
-        const vnpUrl = process.env.VNP_URL;
-        const returnUrl = process.env.VNP_RETURN_URL;
-
-        const missingEnv = [];
-        if (!tmnCode) missingEnv.push('NEXT_PUBLIC_VNP_TMN_CODE');
-        if (!secretKey) missingEnv.push('VNP_HASH_SECRET');
-        if (!vnpUrl) missingEnv.push('VNP_URL');
-        if (!returnUrl) missingEnv.push('VNP_RETURN_URL');
-
-        if (missingEnv.length > 0) {
-            console.error('Missing VNPAY configuration:', missingEnv);
-            return NextResponse.json({
-                error: 'Missing VNPAY configuration',
-                details: missingEnv
-            }, { status: 500 });
+        // 1. Validate required fields
+        if (!amount || !userId) {
+            return NextResponse.json(
+                { success: false, error: 'Missing required fields: amount and userId' },
+                { status: 400 }
+            );
         }
 
-        const date = new Date();
-        const createDate = moment(date).format('YYYYMMDDHHmmss');
-        const orderId = moment(date).format('DDHHmmss');
-
-        let vnp_Params: any = {};
-        vnp_Params['vnp_Version'] = '2.1.0';
-        vnp_Params['vnp_Command'] = 'pay';
-        vnp_Params['vnp_TmnCode'] = tmnCode;
-        vnp_Params['vnp_Locale'] = 'vn';
-        vnp_Params['vnp_CurrCode'] = 'VND';
-        vnp_Params['vnp_TxnRef'] = orderId;
-        vnp_Params['vnp_OrderInfo'] = orderInfo;
-        vnp_Params['vnp_OrderType'] = 'other';
-        vnp_Params['vnp_Amount'] = amount * 100;
-        vnp_Params['vnp_ReturnUrl'] = returnUrl;
-        vnp_Params['vnp_IpAddr'] = ipAddr;
-        vnp_Params['vnp_CreateDate'] = createDate;
-        if (bankCode) {
-            vnp_Params['vnp_BankCode'] = bankCode;
+        // 2. Validate amount
+        if (amount < MIN_AMOUNT) {
+            return NextResponse.json(
+                { success: false, error: `Minimum amount is ${MIN_AMOUNT.toLocaleString('vi-VN')}đ` },
+                { status: 400 }
+            );
         }
 
-        vnp_Params = sortObject(vnp_Params);
+        if (amount > MAX_AMOUNT) {
+            return NextResponse.json(
+                { success: false, error: `Maximum amount is ${MAX_AMOUNT.toLocaleString('vi-VN')}đ` },
+                { status: 400 }
+            );
+        }
 
-        const signData = qs.stringify(vnp_Params, { encode: false });
-        const hmac = crypto.createHmac("sha512", secretKey!);
-        const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
-        vnp_Params['vnp_SecureHash'] = signed;
+        // 3. Verify user exists
+        const supabase = getSupabaseAdmin();
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('user_id, email, display_name')
+            .eq('user_id', userId)
+            .single();
 
-        const paymentUrl = vnpUrl + '?' + qs.stringify(vnp_Params, { encode: false });
-        console.log('VNPAY URL Created:', paymentUrl);
+        if (userError || !user) {
+            return NextResponse.json(
+                { success: false, error: 'User not found' },
+                { status: 404 }
+            );
+        }
 
-        return NextResponse.json({ url: paymentUrl });
-    } catch (error: any) {
-        console.error('VNPAY Create Error:', error);
+        // 4. Get client IP
+        const ipAddr = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') ||
+            '127.0.0.1';
+
+        // 5. Create payment URL
+        const orderInfo = description || `Nap tien vi CupSipSmart - ${user.display_name || userId}`;
+
+        const paymentUrl = createVnpayUrl({
+            amount,
+            orderInfo,
+            ipAddr,
+            orderId: `${userId}_${Date.now()}`,
+            userId,
+            bankCode,
+        });
+
+        // 6. Create pending payment transaction
+        const transactionCode = `${userId}_${Date.now()}`;
+        await supabase.from('payment_transactions').insert({
+            user_id: userId,
+            type: 'topup',
+            amount,
+            payment_method: 'vnpay',
+            transaction_code: transactionCode,
+            status: 'pending',
+            description: orderInfo,
+        });
+
+        logger.payment.info('Payment URL created', { userId, amount, transactionCode });
+
         return NextResponse.json({
-            error: 'Failed to create payment',
-            message: error.message,
-            stack: error.stack
-        }, { status: 500 });
-    }
-}
+            success: true,
+            url: paymentUrl,
+            transactionCode,
+        });
 
-function sortObject(obj: any): any {
-    const sorted: any = {};
-    const keys = Object.keys(obj).sort();
-    keys.forEach((key) => {
-        sorted[key] = obj[key];
-    });
-    return sorted;
+    } catch (error) {
+        const err = error as Error;
+        logger.payment.error('Failed to create payment URL', { error: err.message });
+        return NextResponse.json(
+            { success: false, error: 'Failed to create payment' },
+            { status: 500 }
+        );
+    }
 }

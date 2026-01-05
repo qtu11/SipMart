@@ -3,6 +3,7 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'firebase/messaging';
+import { logger } from '../logger';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,7 +22,7 @@ if (typeof window !== 'undefined') {
   if (!firebaseConfig.projectId || firebaseConfig.projectId === 'undefined') missingConfigs.push('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
 
   if (missingConfigs.length > 0) {
-    console.error(`Missing Firebase config: ${missingConfigs.join(', ')}`);
+    logger.error(`Missing Firebase config: ${missingConfigs.join(', ')}`);
 
   }
 }

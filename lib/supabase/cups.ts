@@ -60,14 +60,11 @@ export async function borrowCupAtomic(
         });
 
     if (error) {
-        // Check if it's a lock error (concurrent request)
-        if (error.message?.includes('NOWAIT')) {
-            throw new Error('Cup is being processed by another request. Please try again.');
-        }
         throw error;
     }
 
-    return data[0] || { success: false, message: 'Unknown error' };
+    // RPC now returns JSON object directly
+    return data || { success: false, message: 'Unknown error' };
 }
 
 /**
@@ -84,13 +81,11 @@ export async function returnCupAtomic(
         });
 
     if (error) {
-        if (error.message?.includes('NOWAIT')) {
-            throw new Error('Cup is being processed by another request. Please try again.');
-        }
         throw error;
     }
 
-    return data[0] || { success: false, message: 'Unknown error' };
+    // RPC now returns JSON object directly
+    return data || { success: false, message: 'Unknown error' };
 }
 
 /**

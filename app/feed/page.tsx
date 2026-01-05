@@ -7,6 +7,7 @@ import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { logger } from '@/lib/logger';
 
 interface FeedPost {
   postId: string;
@@ -66,7 +67,7 @@ export default function FeedPage() {
       setPosts(mappedPosts);
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error fetching feed:', error);
+      logger.error('Error fetching feed', { error });
       toast.error('Không thể tải feed');
       setPosts([]);
     } finally {

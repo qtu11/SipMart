@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, GraduationCap, Calendar, Award, Edit2, Camera } from 'lucide-react';
 import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
+import { UserProfile } from '@/lib/types/api';
+import { logger } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { getUser } from '@/lib/supabase/users';
 import toast from 'react-hot-toast';
@@ -24,28 +26,28 @@ export default function ProfilePage() {
         }
 
         setUser(currentUser);
-        
+
         // Fetch user data từ Supabase
         try {
           const userId = (currentUser as any).id || (currentUser as any).user_id;
           const data = await getUser(userId);
           setUserData(data);
         } catch (error: unknown) {
-      const err = error as Error;
-          console.error('Error fetching user data:', error);
+          const err = error as Error;
+          logger.error('Error fetching user data', { error });
         } finally {
           setLoading(false);
         }
       } catch (error: unknown) {
-      const err = error as Error;
-        console.error('Error checking auth:', error);
+        const err = error as Error;
+        logger.error('Error checking auth', { error });
         router.push('/auth/login');
         setLoading(false);
       }
     };
 
     checkAuth();
-    
+
     // Also listen to auth changes
     const unsubscribe = onAuthChange(async (currentUser) => {
       if (!currentUser) {
@@ -53,13 +55,13 @@ export default function ProfilePage() {
         return;
       }
       setUser(currentUser);
-      
+
       try {
         const userId = (currentUser as any).id || (currentUser as any).user_id;
         const data = await getUser(userId);
         setUserData(data);
       } catch (error: unknown) {
-      const err = error as Error;
+        const err = error as Error;
         console.error('Error fetching user data:', error);
       }
     });
@@ -104,7 +106,7 @@ export default function ProfilePage() {
           <div className="absolute inset-0 opacity-20" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
           }} />
-          
+
           <div className="relative flex items-center gap-6">
             <div className="relative">
               <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30">
@@ -114,13 +116,13 @@ export default function ProfilePage() {
                 <Camera className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="flex-1">
               <h2 className="text-3xl font-bold mb-2">
                 {userData?.displayName || user?.displayName || 'Người dùng'}
               </h2>
               <p className="text-primary-100 mb-4">{user?.email}</p>
-              
+
               <div className="flex items-center gap-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
                   <div className="text-2xl mb-1">{rankEmojis[userData?.rankLevel || 'seed']}</div>
@@ -203,7 +205,7 @@ export default function ProfilePage() {
           className="bg-white rounded-2xl p-6 shadow-xl border-2 border-dark-100"
         >
           <h3 className="text-lg font-bold text-dark-800 mb-4">Thông tin cá nhân</h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <Mail className="w-5 h-5 text-dark-400" />

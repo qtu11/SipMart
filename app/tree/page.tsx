@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Droplet, Leaf } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface VirtualTree {
   level: number;
@@ -29,7 +30,7 @@ export default function TreePage() {
       setTree(data);
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error fetching tree:', error);
+      logger.error('Error fetching tree', { error });
       // Fallback mock data
       setTree({
         level: 1,
@@ -53,7 +54,7 @@ export default function TreePage() {
   const getTreeEmoji = (level: number, health: string) => {
     if (health === 'dead') return '💀';
     if (health === 'wilting') return '🍂';
-    
+
     const emojis = ['🌱', '🌿', '🌳', '🌲', '🌴', '🌳', '🌲', '🌳', '🌲', '🌍'];
     return emojis[Math.min(level - 1, emojis.length - 1)];
   };
@@ -94,13 +95,12 @@ export default function TreePage() {
                 initial={{ width: 0 }}
                 animate={{ width: `${tree.growth}%` }}
                 transition={{ duration: 0.5 }}
-                className={`h-full rounded-full ${
-                  tree.health === 'healthy'
-                    ? 'bg-gradient-to-r from-primary-400 to-primary-600'
-                    : tree.health === 'wilting'
+                className={`h-full rounded-full ${tree.health === 'healthy'
+                  ? 'bg-gradient-to-r from-primary-400 to-primary-600'
+                  : tree.health === 'wilting'
                     ? 'bg-orange-400'
                     : 'bg-red-400'
-                }`}
+                  }`}
               />
             </div>
           </div>

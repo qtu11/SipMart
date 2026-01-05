@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
+import { UserProfile } from '@/lib/types/api';
+import { logger } from '@/lib/logger';
 import ChatAI from '@/components/ChatAI';
 import Scene3D from '@/components/Scene3D';
 import ProfileMenu from '@/components/ProfileMenu';
@@ -27,7 +29,7 @@ export default function Home() {
 
       if (currentUser) {
         // Fetch user stats
-        fetch(`/api/wallet?userId=${(currentUser as any).id || (currentUser as any).user_id}`)
+        fetch(`/api/wallet?userId=${(currentUser as UserProfile).id || (currentUser as UserProfile).user_id}`)
           .then(res => res.json())
           .then(data => {
             if (data.walletBalance !== undefined) {
@@ -39,7 +41,7 @@ export default function Home() {
               });
             }
           })
-          .catch(err => console.error('Error fetching stats:', err));
+          .catch(err => logger.error('Error fetching stats', { error: err }));
       }
     });
 

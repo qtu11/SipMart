@@ -7,13 +7,12 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
  */
 export async function POST(request: NextRequest) {
     try {
-        // Verify cron secret to prevent unauthorized access
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
+        // SECURITY: Use auth middleware to verify cron secret
+        const { verifyCronAuth } = await import('@/lib/middleware/auth');
 
-        if (authHeader !== `Bearer ${cronSecret}`) {
+        if (!verifyCronAuth(request)) {
             return NextResponse.json(
-                { error: 'Unauthorized' },
+                { error: 'Unauthorized - Invalid or missing cron secret' },
                 { status: 401 }
             );
         }

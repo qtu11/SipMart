@@ -19,6 +19,12 @@ model User {
   rankLevel           String   @default("seed") // seed | sprout | sapling | tree | forest
   totalCupsSaved      Int      @default(0)
   totalPlasticReduced Int      @default(0) // grams
+  
+  // Green Streak Tracking (IMPROVED)
+  greenStreak         Int      @default(0) // Current consecutive on-time returns
+  lastReturnDate      DateTime? // Last return date to check continuity
+  bestStreak          Int      @default(0) // All-time best streak
+  
   createdAt           DateTime @default(now())
   lastActivity        DateTime @default(now())
   isBlacklisted       Boolean  @default(false)

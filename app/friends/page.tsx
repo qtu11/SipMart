@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/supabase/auth';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 
 interface Friend {
   userId: string;
@@ -72,7 +73,7 @@ export default function FriendsPage() {
       }
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error loading friend requests:', error);
+      logger.error('Error loading friend requests', { error });
     }
   }, [userId]);
 
@@ -86,7 +87,7 @@ export default function FriendsPage() {
       }
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error loading friends:', error);
+      logger.error('Error loading friends', { error });
     }
   }, [userId]);
 

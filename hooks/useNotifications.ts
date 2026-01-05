@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { getCurrentUser, onAuthChange } from '@/lib/firebase/auth';
-import { 
-  requestNotificationPermission, 
+import {
+  requestNotificationPermission,
   onForegroundMessage,
   getNotificationPermission,
-  isNotificationSupported 
+  isNotificationSupported
 } from '@/lib/firebase/messaging';
 import { doc, setDoc, getDoc, collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 
 interface Notification {
   id: string;
@@ -97,9 +98,9 @@ export function useNotifications() {
         fcmToken: token,
         fcmTokenUpdatedAt: new Date(),
       }, { merge: true });
-      
+
     } catch (error) {
-      console.error('Error saving FCM token:', error);
+      logger.error('Error saving FCM token', { error });
     }
   };
 
@@ -108,7 +109,7 @@ export function useNotifications() {
    */
   const loadNotifications = (userId: string) => {
     setLoading(true);
-    
+
     const notificationsRef = collection(db, 'notifications');
     const q = query(
       notificationsRef,
@@ -134,7 +135,7 @@ export function useNotifications() {
       setNotifications(notifs);
       setLoading(false);
     }, (error) => {
-      console.error('Error loading notifications:', error);
+      logger.error('Error loading notifications', { error });
       setLoading(false);
     });
 
@@ -154,12 +155,12 @@ export function useNotifications() {
     if (token) {
       setFcmToken(token);
       setPermission('granted');
-      
+
       const user = getCurrentUser();
       if (user) {
         await saveFCMToken(user.uid, token);
       }
-      
+
       toast.success('Đã bật thông báo thành công!');
       return true;
     } else {

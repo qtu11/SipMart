@@ -175,7 +175,8 @@ export async function getAdvancedAnalytics(): Promise<AdvancedAnalytics | null> 
       predictedCupsNeededNextWeek,
       recommendedStockLevel,
     };
-  } catch (error) {    return null;
+  } catch (error) {
+    return null;
   }
 }
 
@@ -242,11 +243,11 @@ export async function getPersonalEcoDashboard(userId: string): Promise<PersonalE
       if (t.returnTime) {
         const date = new Date(t.returnTime.seconds * 1000);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        
+
         if (!monthlyMap[monthKey]) {
           monthlyMap[monthKey] = { cupsSaved: 0, points: 0 };
         }
-        
+
         monthlyMap[monthKey].cupsSaved += 1;
         monthlyMap[monthKey].points += t.greenPointsEarned || 0;
       }
@@ -277,7 +278,8 @@ export async function getPersonalEcoDashboard(userId: string): Promise<PersonalE
       monthlyStats,
       percentileRank,
     };
-  } catch (error) {    return null;
+  } catch (error) {
+    return null;
   }
 }
 
@@ -360,7 +362,8 @@ export async function getTransactionHistory(
     );
 
     return history;
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -452,7 +455,8 @@ export async function generateDailyReport(): Promise<DailyReportData> {
       topStores,
       alerts,
     };
-  } catch (error) {    return {
+  } catch (error) {
+    return {
       date: new Date().toISOString().split('T')[0],
       totalTransactions: 0,
       completedTransactions: 0,

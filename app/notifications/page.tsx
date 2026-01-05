@@ -7,6 +7,7 @@ import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import { useSupabaseNotifications } from '@/hooks/useSupabaseNotifications';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 
 interface Notification {
   notification_id?: string;
@@ -46,7 +47,7 @@ export default function NotificationsPage() {
     return () => unsubscribe();
   }, [router]);
 
-  const { notifications, loading, unreadCount, markAsRead, deleteNotification } = 
+  const { notifications, loading, unreadCount, markAsRead, deleteNotification } =
     useSupabaseNotifications(user?.uid || null);
 
   const handleMarkAsRead = async (id: string) => {
@@ -55,7 +56,7 @@ export default function NotificationsPage() {
       toast.success('Đã đánh dấu đã đọc');
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error marking as read:', error);
+      logger.error('Error marking as read', { error });
       toast.error('Có lỗi xảy ra');
     }
   };
@@ -66,7 +67,7 @@ export default function NotificationsPage() {
       toast.success('Đã xóa thông báo');
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error deleting:', error);
+      logger.error('Error deleting', { error });
       toast.error('Có lỗi xảy ra');
     }
   };
@@ -138,10 +139,10 @@ export default function NotificationsPage() {
         ) : (
           notifications.map((notif, index) => {
             const notificationId = (notif as any).notification_id || (notif as any).id || '';
-            const timestamp = typeof notif.timestamp === 'string' 
-              ? new Date(notif.timestamp) 
+            const timestamp = typeof notif.timestamp === 'string'
+              ? new Date(notif.timestamp)
               : notif.timestamp;
-            
+
             return (
               <motion.div
                 key={notificationId}
@@ -149,15 +150,14 @@ export default function NotificationsPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => handleNotificationClick({ ...notif, id: notificationId, timestamp })}
-                className={`bg-white rounded-2xl p-5 shadow-xl border-2 cursor-pointer hover:shadow-2xl transition ${getBgColor(notif.type)} ${
-                  !notif.read ? 'ring-2 ring-primary-500' : ''
-                }`}
+                className={`bg-white rounded-2xl p-5 shadow-xl border-2 cursor-pointer hover:shadow-2xl transition ${getBgColor(notif.type)} ${!notif.read ? 'ring-2 ring-primary-500' : ''
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
                     {getIcon(notif.type)}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
@@ -172,7 +172,7 @@ export default function NotificationsPage() {
                           })}
                         </p>
                       </div>
-                      
+
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {!notif.read && (
                           <button

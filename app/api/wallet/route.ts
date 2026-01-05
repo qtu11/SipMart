@@ -1,71 +1,94 @@
+// Wallet API with Authentication
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, updateWallet } from '@/lib/supabase/users';
+import { verifyAuth } from '@/lib/middleware/auth';
+import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
+// GET: Get wallet info (requires auth)
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    // SECURITY: Verify authentication
+    const authResult = await verifyAuth(request);
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Missing userId' },
-        { status: 400 }
-      );
+    if (!authResult.authenticated || !authResult.userId) {
+      return unauthorizedResponse();
     }
 
+    const userId = authResult.userId;
     const user = await getUser(userId);
+
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse('User not found', 404);
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       walletBalance: user.walletBalance,
       greenPoints: user.greenPoints,
       rankLevel: user.rankLevel,
       totalCupsSaved: user.totalCupsSaved,
       totalPlasticReduced: user.totalPlasticReduced,
     });
-  } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { error: err.message || 'Internal server error' },
-      { status: 500 }
-    );
+
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Wallet GET error', { error: err.message });
+    return errorResponse('Internal server error');
   }
 }
 
-
+// POST: Top up wallet (requires auth + payment gateway)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, amount } = body;
+    // SECURITY: Verify authentication
+    const authResult = await verifyAuth(request);
 
-    if (!userId || !amount || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Invalid request' },
-        { status: 400 }
-      );
+    if (!authResult.authenticated || !authResult.userId) {
+      return unauthorizedResponse();
     }
 
-    // Nạp tiền vào ví (tích hợp với payment gateway sau)
+    const userId = authResult.userId;
+    const body = await request.json();
+    const { amount, method } = body;
+
+    if (!amount || amount <= 0) {
+      return errorResponse('Invalid amount', 400);
+    }
+
+    // Get current user
     const user = await getUser(userId);
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse('User not found', 404);
     }
 
-    // TODO: Tích hợp payment gateway (MoMo, ZaloPay, VNPay)
-    // Hiện tại chỉ cập nhật balance
-    await updateWallet(userId, amount);
+    // Route to appropriate payment gateway
+    if (method === 'vnpay') {
+      // Redirect to VNPay payment creation
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/vnpay/create_payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, amount }),
+      });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Nạp tiền thành công',
-      newBalance: user.walletBalance + amount,
-    });
-  } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { error: err.message || 'Internal server error' },
-      { status: 500 }
-    );
+      const data = await response.json();
+      return NextResponse.json(data);
+    }
+
+    // For direct top-up (admin or test only)
+    // In production, this should be protected or removed
+    if (process.env.NODE_ENV === 'development') {
+      await updateWallet(userId, amount);
+
+      return jsonResponse({
+        newBalance: user.walletBalance + amount,
+      }, 'Nạp tiền thành công (dev mode)');
+    }
+
+    return errorResponse('Payment method required', 400);
+
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Wallet POST error', { error: err.message });
+    return errorResponse('Internal server error');
   }
 }
-

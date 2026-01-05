@@ -100,7 +100,7 @@ export async function updateCupStatus(
 export async function getCupsByStatus(status: CupStatus): Promise<Cup[]> {
   const q = query(collection(db, COLLECTIONS.CUPS), where('status', '==', status));
   const snapshot = await getDocs(q);
-  
+
   return snapshot.docs.map((doc: any) => ({
     cupId: doc.id,
     ...doc.data(),
@@ -117,7 +117,7 @@ export async function getUserCups(userId: string): Promise<Cup[]> {
     where('status', '==', 'in_use')
   );
   const snapshot = await getDocs(q);
-  
+
   return snapshot.docs.map((doc: any) => ({
     cupId: doc.id,
     ...doc.data(),

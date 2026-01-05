@@ -1,54 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUser } from '@/lib/supabase/users';
-import { getCup, markCupForCleaning } from '@/lib/supabase/cups';
+import { getCup } from '@/lib/supabase/cups';
 import { getStore, returnCupToStore } from '@/lib/supabase/stores';
 import { getTransaction, completeTransaction } from '@/lib/supabase/transactions';
+import { verifyAuth } from '@/lib/middleware/auth';
+import { returnSchema, validateRequest } from '@/lib/validation/schemas';
+import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, cupId, storeId } = body;
+    // SECURITY: Verify user authentication first
+    const authResult = await verifyAuth(request);
 
-    if (!userId || !cupId || !storeId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    if (!authResult.authenticated || !authResult.userId) {
+      return unauthorizedResponse();
     }
+
+    // Use authenticated userId only (not from request body)
+    const userId = authResult.userId;
+    const body = await request.json();
+
+    // Input validation using Zod
+    const validation = validateRequest(returnSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.error, 400);
+    }
+
+    const { cupId, storeId } = validation.data;
 
     // Kiểm tra cup
     const cup = await getCup(cupId);
     if (!cup) {
-      return NextResponse.json({ error: 'Cup not found' }, { status: 404 });
+      return errorResponse('Cup not found', 404);
     }
 
     if (cup.status !== 'in_use' || cup.currentUserId !== userId) {
-      return NextResponse.json(
-        { error: 'Cup is not borrowed by this user' },
-        { status: 400 }
-      );
+      return errorResponse('Cup is not borrowed by this user', 400);
     }
 
     // Kiểm tra transaction
     if (!cup.currentTransactionId) {
-      return NextResponse.json(
-        { error: 'No active transaction found' },
-        { status: 400 }
-      );
+      return errorResponse('No active transaction found', 400);
     }
 
     const transaction = await getTransaction(cup.currentTransactionId);
     if (!transaction || transaction.status !== 'ongoing') {
-      return NextResponse.json(
-        { error: 'Transaction not found or already completed' },
-        { status: 400 }
-      );
+      return errorResponse('Transaction not found or already completed', 400);
     }
 
     // Kiểm tra store
     const store = await getStore(storeId);
     if (!store) {
-      return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+      return errorResponse('Store not found', 404);
     }
 
     // Hoàn tất transaction (includes refund calculation, green points, etc.)
@@ -68,34 +71,22 @@ export async function POST(request: NextRequest) {
     // Cập nhật inventory
     await returnCupToStore(storeId);
 
-    // Lấy thông tin user sau khi update để tạo story
+    // Lấy thông tin user sau khi update
     const updatedUser = await getUser(userId);
     const cupsSaved = updatedUser?.totalCupsSaved || 0;
 
-    // TODO: Tạo story tự động khi trả ly thành công (cần implement Supabase stories helper)
-    // if (!completedTransaction.isOverdue) {
-    //   await createAchievementStory(userId, 'cup_saved', {
-    //     count: cupsSaved,
-    //     message: `Đã cứu ${cupsSaved} ly nhựa! 🌱`,
-    //   });
-    // }
-
-    return NextResponse.json({
-      success: true,
-      message: completedTransaction.isOverdue
-        ? '✅ Trả ly thành công! (Trả quá hạn, bạn nhận được ít điểm hơn)'
-        : `🌱 Trả ly thành công! Bạn nhận được ${completedTransaction.greenPointsEarned} Green Points!`,
+    return jsonResponse({
       refundAmount: completedTransaction.refundAmount,
       greenPointsEarned: completedTransaction.greenPointsEarned,
       isOverdue: completedTransaction.isOverdue,
       overdueHours: completedTransaction.overdueHours,
       cupsSaved,
-    });
+    }, completedTransaction.isOverdue
+      ? '✅ Trả ly thành công! (Trả quá hạn, bạn nhận được ít điểm hơn)'
+      : `🌱 Trả ly thành công! Bạn nhận được ${completedTransaction.greenPointsEarned} Green Points!`);
+
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
+

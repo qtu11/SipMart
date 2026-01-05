@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal, Award } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface LeaderboardEntry {
   userId: string;
@@ -29,7 +30,7 @@ export default function LeaderboardPage() {
       setLeaderboard(data.leaderboard || []);
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error fetching leaderboard:', error);
+      logger.error('Error fetching leaderboard', { error });
     } finally {
       setLoading(false);
     }

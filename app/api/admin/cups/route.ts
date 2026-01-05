@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCupWithFallback } from '@/lib/firebase/cups-with-fallback';
-import { addCupsToStoreWithFallback } from '@/lib/firebase/stores-with-fallback';
 import { generateUniqueCupId, generateQRCodeData, getMaterialDisplayName } from '@/lib/utils/cupId';
 import { checkAdminApi } from '@/lib/supabase/admin';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
 import QRCode from 'qrcode';
 
 // Tạo mã QR cho lô ly mới
@@ -29,11 +28,24 @@ export async function POST(request: NextRequest) {
     const qrDataStrings: string[] = [];
     const qrCodes: Array<{ cupId: string; qrData: string; qrImage?: string }> = [];
 
-    // Tạo từng cup với 8-digit ID
+    // Tạo từng cup với 8-digit ID using Supabase
+    const supabase = getSupabaseAdmin();
+
     for (let i = 0; i < count; i++) {
       try {
         const cupId = await generateUniqueCupId();
-        await createCupWithFallback(cupId, material, storeId);
+
+        // Create cup in Supabase
+        const { error: cupError } = await supabase
+          .from('cups')
+          .insert({
+            cup_id: cupId,
+            material: material,
+            status: 'available',
+            store_id: storeId,
+          });
+
+        if (cupError) throw cupError;
 
         // Tạo QR code data với format: "CUP|{cupId}|{material}|CupSipSmart"
         const qrData = generateQRCodeData(cupId, material);
@@ -41,13 +53,33 @@ export async function POST(request: NextRequest) {
         cupIds.push(cupId);
         qrDataStrings.push(qrData);
         qrCodes.push({ cupId, qrData });
-      } catch (cupError: any) {        // Continue với các cup khác, nhưng log lỗi
+      } catch (cupError: any) {
         throw new Error(`Failed to create cup ${i + 1}: ${cupError.message}`);
       }
     }
 
-    // Cập nhật inventory store
-    await addCupsToStoreWithFallback(storeId, count);
+    // Cập nhật inventory store - increment cup counts
+    // Use RPC for atomic increment or fetch-update pattern
+    const { data: storeData } = await supabase
+      .from('stores')
+      .select('cup_total, cup_available')
+      .eq('store_id', storeId)
+      .single();
+
+    if (storeData) {
+      const { error: storeError } = await supabase
+        .from('stores')
+        .update({
+          cup_total: storeData.cup_total + count,
+          cup_available: storeData.cup_available + count,
+        })
+        .eq('store_id', storeId);
+
+      if (storeError) {
+        console.error('Failed to update store inventory:', storeError);
+        // Don't throw - cups are created, just inventory count may be off
+      }
+    }
 
     // Tạo QR code images (base64)
     const qrCodesWithImages = await Promise.all(
@@ -137,9 +169,40 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    // Generate QR codes for each cup (for display in QRCodeDisplay component)
+    const cupsWithQR = await Promise.all(
+      (cups || []).map(async (cup) => {
+        const cupId = cup.cup_id;
+        const material = cup.material || 'pp_plastic';
+        const qrData = generateQRCodeData(cupId, material);
+
+        try {
+          const qrImage = await QRCode.toDataURL(qrData, {
+            errorCorrectionLevel: 'M',
+            type: 'image/png',
+            width: 300,
+            margin: 2,
+          });
+          return {
+            cupId,
+            material,
+            qrData,
+            qrImage,
+          };
+        } catch (qrError) {
+          // If QR generation fails, return without image
+          return {
+            cupId,
+            material,
+            qrData,
+          };
+        }
+      })
+    );
+
     return NextResponse.json({
       success: true,
-      cups: cups || [],
+      cups: cupsWithQR,
       pagination: {
         page,
         limit,

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot, User as UserIcon, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 
 interface Message {
   id: string;
@@ -80,9 +81,9 @@ export default function ChatAI() {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error', { error });
       toast.error('Lỗi khi gửi tin nhắn');
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -172,11 +173,10 @@ export default function ChatAI() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 sm:px-4 sm:py-2 ${
-                        message.role === 'user'
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-white text-dark-800 shadow-soft border border-dark-100'
-                      }`}
+                      className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 sm:px-4 sm:py-2 ${message.role === 'user'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-white text-dark-800 shadow-soft border border-dark-100'
+                        }`}
                     >
                       <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                       <p className={`text-[10px] sm:text-xs mt-1 ${message.role === 'user' ? 'text-white/70' : 'text-dark-400'}`}>

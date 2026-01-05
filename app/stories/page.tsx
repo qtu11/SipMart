@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCurrentUserAsync } from '@/lib/supabase/auth';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/logger';
 import Image from 'next/image';
 
 interface Story {
@@ -58,7 +59,7 @@ export default function StoriesPage() {
       }
     } catch (error: unknown) {
       const err = error as Error;
-      console.error('Error loading stories:', error);
+      logger.error('Error loading stories', { error });
       toast.error('Lỗi khi tải stories');
     } finally {
       setLoading(false);
@@ -109,7 +110,7 @@ export default function StoriesPage() {
     setCurrentStoryIndex(0);
     setCurrentUserIndex(startIndex);
     setShowStoryViewer(true);
-    
+
     // Mark as viewed
     const story = stories[startIndex];
     if (story && userId) {
@@ -143,8 +144,8 @@ export default function StoriesPage() {
 
       const data = await res.json();
       if (data.success) {
-        setStories(stories.map(s => 
-          s.storyId === storyId 
+        setStories(stories.map(s =>
+          s.storyId === storyId
             ? { ...s, likes: data.isLiked ? [...s.likes, userId] : s.likes.filter(id => id !== userId) }
             : s
         ));
@@ -334,11 +335,10 @@ export default function StoriesPage() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => handleLike(currentStory.storyId)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-sm transition ${
-                      currentStory.likes.includes(userId || '')
-                        ? 'bg-red-500/80 text-white'
-                        : 'bg-white/20 text-white hover:bg-white/30'
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-sm transition ${currentStory.likes.includes(userId || '')
+                      ? 'bg-red-500/80 text-white'
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                      }`}
                   >
                     <Heart className={`w-5 h-5 ${currentStory.likes.includes(userId || '') ? 'fill-current' : ''}`} />
                     <span>{currentStory.likes.length}</span>

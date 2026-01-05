@@ -1,70 +1,97 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUser, updateWallet } from '@/lib/supabase/users';
-import { getCup, updateCupStatus, incrementCupUses } from '@/lib/supabase/cups';
+import { NextRequest } from 'next/server';
+import { getUser, updateWallet, addGreenPoints } from '@/lib/supabase/users';
+import { getCup } from '@/lib/supabase/cups';
 import { getStore, borrowCupFromStore } from '@/lib/supabase/stores';
 import { createTransaction } from '@/lib/supabase/transactions';
+import { getTierInfo, checkFirstTimeBonus, applyFirstTimeBonus } from '@/lib/supabase/gamification';
+import { GAMIFICATION_CONFIG } from '@/lib/config/gamification';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { verifyAuth } from '@/lib/middleware/auth';
+import { borrowSchema, validateRequest } from '@/lib/validation/schemas';
+import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 const DEPOSIT_AMOUNT = parseInt(process.env.NEXT_PUBLIC_DEPOSIT_AMOUNT || '20000');
 const BORROW_DURATION_HOURS = parseInt(process.env.NEXT_PUBLIC_BORROW_DURATION_HOURS || '24');
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, cupId, storeId } = body;
+    // SECURITY: Verify user authentication first
+    const authResult = await verifyAuth(request);
 
-    if (!userId || !cupId || !storeId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    if (!authResult.authenticated || !authResult.userId) {
+      return unauthorizedResponse();
     }
+
+    // Use authenticated userId only (not from request body)
+    const userId = authResult.userId;
+    const body = await request.json();
+
+    // Input validation using Zod
+    const validation = validateRequest(borrowSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.error, 400);
+    }
+
+    const { cupId, storeId } = validation.data;
 
     // Kiểm tra user có đủ tiền cọc không
     const user = await getUser(userId);
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return errorResponse('User not found', 404);
     }
 
     if (user.isBlacklisted) {
-      return NextResponse.json(
-        { error: 'User is blacklisted', reason: user.blacklistReason },
-        { status: 403 }
-      );
+      return errorResponse(`User is blacklisted: ${user.blacklistReason}`, 403);
     }
 
     if (user.walletBalance < DEPOSIT_AMOUNT) {
-      return NextResponse.json(
-        { error: 'Insufficient wallet balance', required: DEPOSIT_AMOUNT, current: user.walletBalance },
-        { status: 400 }
+      return errorResponse(
+        `Insufficient wallet balance. Required: ${DEPOSIT_AMOUNT}, Current: ${user.walletBalance}`,
+        400
       );
     }
 
     // Kiểm tra cup có available không
     const cup = await getCup(cupId);
     if (!cup) {
-      return NextResponse.json({ error: 'Cup not found' }, { status: 404 });
+      return errorResponse('Cup not found', 404);
     }
 
     // CRITICAL: Check cup status - this prevents race conditions
     // If another request is processing this cup, it will fail here
     if (cup.status !== 'available') {
-      return NextResponse.json(
-        { error: `Cup is ${cup.status}`, currentStatus: cup.status },
-        { status: 400 }
-      );
+      return errorResponse(`Cup is ${cup.status}`, 400);
     }
 
     // Kiểm tra store
     const store = await getStore(storeId);
     if (!store) {
-      return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+      return errorResponse('Store not found', 404);
     }
 
     if (store.cupAvailable < 1) {
-      return NextResponse.json(
-        { error: 'Store has no available cups' },
-        { status: 400 }
+      return errorResponse('Store has no available cups', 400);
+    }
+
+    // ============= GAMIFICATION: Check tier limit =============
+    const tierInfo = await getTierInfo(userId);
+    if (!tierInfo.canBorrow) {
+      return errorResponse(
+        `Bạn đã đạt giới hạn mượn ly cho hạng ${tierInfo.currentTier}`,
+        400
       );
+    }
+
+    // ============= GAMIFICATION: Check first-time bonus =============
+    const isFirstTime = await checkFirstTimeBonus(userId);
+    const actualDepositAmount = DEPOSIT_AMOUNT;
+
+    if (isFirstTime) {
+      // TODO: Configure which bonus type to use (free_deposit or wallet_credit)
+      // For now, using wallet_credit (25k VND)
+      await applyFirstTimeBonus(userId, 'wallet_credit');
+      // Note: If using 'free_deposit', set actualDepositAmount = 0 here
     }
 
     // Tạo transaction
@@ -72,12 +99,12 @@ export async function POST(request: NextRequest) {
       userId,
       cupId,
       borrowStoreId: storeId,
-      depositAmount: DEPOSIT_AMOUNT,
+      depositAmount: actualDepositAmount,
       durationHours: BORROW_DURATION_HOURS,
     });
 
     // Trừ tiền cọc
-    await updateWallet(userId, -DEPOSIT_AMOUNT);
+    await updateWallet(userId, -actualDepositAmount);
 
     // ATOMIC: Cập nhật cup status using database RPC (prevents all race conditions)
     // This locks the cup row and ensures only one user can borrow it
@@ -94,9 +121,36 @@ export async function POST(request: NextRequest) {
     // Cập nhật inventory
     await borrowCupFromStore(storeId);
 
+    // ============= GAMIFICATION: Award Green Points =============
+    const borrowPoints = GAMIFICATION_CONFIG.points.borrow;
+    await addGreenPoints(userId, borrowPoints, `Borrowed cup ${cupId}`);
+
+    // ============= GAMIFICATION: Create EcoAction record =============
+    await getSupabaseAdmin()
+      .from('eco_actions')
+      .insert({
+        user_id: userId,
+        type: 'borrow',
+        cup_id: cupId,
+        points: borrowPoints,
+        description: `Mượn ly tại ${store.name}`,
+      });
+
+    // ============= GAMIFICATION: Send notification =============
+    await getSupabaseAdmin()
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type: 'success',
+        title: '🎉 Mượn ly thành công!',
+        message: `Bạn vừa mượn ly tại ${store.name}. Nhận ${borrowPoints} Green Points! Nhớ trả đúng hạn nhé.`,
+        url: '/profile',
+      });
+
     // Gửi email thông báo mượn ly (async, không block response)
     if (user.email) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/email/send-borrow-notification`, {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      fetch(`${appUrl}/api/email/send-borrow-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,23 +161,23 @@ export async function POST(request: NextRequest) {
           dueTime: transaction.dueTime.toISOString(),
           storeName: store.name,
         }),
-      }).catch(() => {
-        // Email error - silent fail, don't block borrow flow
+      }).catch((emailError) => {
+        logger.error('Failed to send borrow notification email', {
+          userId,
+          cupId,
+          error: emailError,
+        });
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: '🌟 Mượn ly thành công! Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!',
+    return jsonResponse({
       transactionId: transaction.transactionId,
       dueTime: transaction.dueTime,
       depositAmount: DEPOSIT_AMOUNT,
-    });
+    }, '🌟 Mượn ly thành công! Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!');
+
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json(
-      { error: err.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
+

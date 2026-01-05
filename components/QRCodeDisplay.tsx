@@ -2,9 +2,11 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Copy, CheckCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import QRCode from 'qrcode';
+import { logger } from '@/lib/logger';
 
 interface QRCode {
   cupId: string;
@@ -21,17 +23,38 @@ interface QRCodeDisplayProps {
 export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) {
   const [selectedQR, setSelectedQR] = useState<QRCode | null>(null);
   const [qrCodesWithLogo, setQrCodesWithLogo] = useState<QRCode[]>(qrCodes);
+  const hasGenerated = useRef(false);
 
-  // Add logo to QR codes when component mounts
+  // Generate QR codes for cups without qrImage, then add logo
   useEffect(() => {
-    async function addLogoToQRCodes() {
+    // Prevent re-generation if already done
+    if (hasGenerated.current) return;
+
+    async function generateAndAddLogoToQRCodes() {
       const updatedQRCodes = await Promise.all(
         qrCodes.map(async (qr) => {
-          // If no qrImage, can't add logo
-          if (!qr.qrImage) return qr;
+          let qrImageData = qr.qrImage;
+
+          // If no qrImage but we have qrData, generate it
+          if (!qrImageData && qr.qrData) {
+            try {
+              qrImageData = await QRCode.toDataURL(qr.qrData, {
+                errorCorrectionLevel: 'M',
+                type: 'image/png',
+                width: 300,
+                margin: 2,
+              });
+            } catch (error) {
+              logger.error('Failed to generate QR code', { error });
+              return qr;
+            }
+          }
+
+          // If still no image, return original
+          if (!qrImageData) return qr;
 
           try {
-            // Create canvas to overlay logo on existing QR image
+            // Create canvas to overlay logo on QR image
             const canvas = document.createElement('canvas');
             const qrSize = 300;
             const logoSize = 60;
@@ -39,15 +62,15 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
             canvas.height = qrSize;
             const ctx = canvas.getContext('2d');
 
-            if (!ctx) return qr;
+            if (!ctx) return { ...qr, qrImage: qrImageData };
 
-            // Load existing QR image
+            // Load QR image
             const qrImage = document.createElement('img');
             qrImage.crossOrigin = 'anonymous';
 
             await new Promise<void>((resolve, reject) => {
               qrImage.onload = () => {
-                // Draw existing QR code
+                // Draw QR code
                 ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
 
                 // Load and draw logo
@@ -76,22 +99,23 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
                 logo.src = '/logo.png';
               };
               qrImage.onerror = reject;
-              qrImage.src = qr.qrImage!;
+              qrImage.src = qrImageData!;
             });
 
             // Return QR with logo
             return { ...qr, qrImage: canvas.toDataURL('image/png') };
           } catch (error) {
-            // If any error, return original
-            return qr;
+            // If any error, return with generated QR (no logo)
+            return { ...qr, qrImage: qrImageData };
           }
         })
       );
 
       setQrCodesWithLogo(updatedQRCodes);
+      hasGenerated.current = true;
     }
 
-    addLogoToQRCodes();
+    generateAndAddLogoToQRCodes();
   }, [qrCodes]);
 
   const downloadQRCode = (qr: QRCode) => {

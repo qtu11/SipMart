@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook để listen Supabase Realtime changes
@@ -24,11 +25,11 @@ export function useSupabaseRealtime<T>(
         if (filter) {
           query = query.eq(filter.split('=')[0], filter.split('=')[1]);
         }
-        
+
         const { data: initialData, error: fetchError } = await query;
-        
+
         if (fetchError) throw fetchError;
-        
+
         setData((initialData as T[]) || []);
         setLoading(false);
 
@@ -44,7 +45,7 @@ export function useSupabaseRealtime<T>(
               filter: filter,
             },
             (payload) => {
-              
+
 
               if (callback) {
                 callback(payload);
@@ -70,7 +71,7 @@ export function useSupabaseRealtime<T>(
 
         // Channel subscription is async, state will update automatically
       } catch (err) {
-        console.error(`Error setting up realtime for ${table}:`, err);
+        logger.error(`Error setting up realtime for ${table}`, { error: err });
         setError(err as Error);
         setLoading(false);
       }
@@ -113,7 +114,7 @@ export function useSupabaseRealtimeRecord<T>(
           .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
-        
+
         setData(initialData as T);
         setLoading(false);
 
@@ -140,7 +141,7 @@ export function useSupabaseRealtimeRecord<T>(
 
         // Channel subscription is async, state will update automatically
       } catch (err) {
-        console.error(`Error setting up realtime for ${table}.${recordId}:`, err);
+        logger.error(`Error setting up realtime for ${table}.${recordId}`, { error: err });
         setError(err as Error);
         setLoading(false);
       }

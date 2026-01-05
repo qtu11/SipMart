@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store } from 'lucide-react';
+import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { signOutUser } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,40 @@ interface ProfileMenuProps {
 
 export default function ProfileMenu({ user }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [userStats, setUserStats] = useState<{ points: number; tier: string } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserStats();
+    }
+  }, [user]);
+
+  const fetchUserStats = async () => {
+    try {
+      const res = await fetch(`/api/gamification/points?userId=${user.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setUserStats({
+          points: data.currentPoints,
+          tier: data.rankLevel,
+        });
+      }
+    } catch (error) {
+      // Silent fail
+    }
+  };
+
+  const getTierEmoji = (tier: string) => {
+    const tiers: Record<string, string> = {
+      seed: '🌱',
+      sprout: '🌿',
+      sapling: '🌳',
+      tree: '🌲',
+      forest: '🌴',
+    };
+    return tiers[tier] || '🌱';
+  };
 
   const handleSignOut = async () => {
     try {
@@ -49,8 +82,22 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
               className="absolute top-12 right-0 w-56 bg-white rounded-2xl shadow-2xl border border-dark-100 z-50 overflow-hidden"
             >
               <div className="p-4 border-b border-dark-100">
-                <p className="font-semibold text-dark-800">{user?.displayName || 'User'}</p>
-                <p className="text-sm text-dark-500">{user?.email}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-dark-800">{user?.displayName || 'User'}</p>
+                  {userStats && (
+                    <span className="text-lg" title={userStats.tier}>
+                      {getTierEmoji(userStats.tier)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-dark-500 mb-2">{user?.email}</p>
+                {userStats && (
+                  <div className="flex items-center gap-1 text-sm text-primary-600 bg-primary-50 rounded-lg px-2 py-1 w-fit">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="font-semibold">{userStats.points.toLocaleString('vi-VN')}</span>
+                    <span className="text-xs">điểm</span>
+                  </div>
+                )}
               </div>
 
               <div className="py-2">

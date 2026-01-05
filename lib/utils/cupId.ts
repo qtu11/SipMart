@@ -1,5 +1,6 @@
 import { db } from '../firebase/config';
 import { COLLECTIONS } from '../firebase/collections';
+import { logger } from '../logger';
 
 /**
  * Tạo ID ly 8 số ngẫu nhiên
@@ -21,7 +22,7 @@ async function isCupIdExists(cupId: string): Promise<boolean> {
     const cupDoc = await getDoc(doc(db, COLLECTIONS.CUPS, cupId));
     if (cupDoc.exists()) return true;
   } catch (error) {
-    console.warn('Error checking cup ID in Firestore:', error);
+    logger.debug('Error checking cup ID in Firestore', { cupId });
   }
 
   // Check Supabase as fallback
@@ -34,11 +35,11 @@ async function isCupIdExists(cupId: string): Promise<boolean> {
         .select('cup_id')
         .eq('cup_id', cupId)
         .single();
-      
+
       if (data && !error) return true;
     }
   } catch (error) {
-    console.warn('Error checking cup ID in Supabase:', error);
+    logger.debug('Error checking cup ID in Supabase', { cupId });
   }
 
   return false;
@@ -102,7 +103,8 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
     }
 
     return null;
-  } catch (error) {    return null;
+  } catch (error) {
+    return null;
   }
 }
 
