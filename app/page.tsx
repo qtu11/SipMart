@@ -4,15 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
+import { onAuthChange } from '@/lib/supabase/auth';
 import { authFetch } from '@/lib/supabase/authFetch';
-import { UserProfile } from '@/lib/types/api';
 import { logger } from '@/lib/logger';
 import ChatAI from '@/components/ChatAI';
 import Scene3D from '@/components/Scene3D';
 import ProfileMenu from '@/components/ProfileMenu';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import FallingLeaves from '@/components/FallingLeaves';
+
+// Social Components
+import SocialLayout from '@/components/social/SocialLayout';
+import Feed from '@/components/social/Feed';
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -71,6 +74,18 @@ export default function Home() {
     );
   }
 
+  // ✅ IF LOGGED IN: RENDER SOCIAL DASHBOARD
+  if (user) {
+    return (
+      <SocialLayout user={user}>
+        <Feed user={user} />
+        {/* ChatAI is floating, so it can stay */}
+        <ChatAI />
+      </SocialLayout>
+    );
+  }
+
+  // ❌ IF NOT LOGGED IN: RENDER LANDING PAGE
   return (
     <div className="bg-gradient-to-br from-primary-50 via-white to-primary-50 relative overflow-hidden">
       {/* Animated Background */}
@@ -98,27 +113,13 @@ export default function Home() {
             </div>
           </motion.div>
           <div className="flex items-center gap-4">
-            {user ? (
-              <>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-right hidden sm:block"
-                >
-                  <div className="text-2xl">{rankEmojis[stats.rankLevel]}</div>
-                  <div className="text-xs text-dark-500 font-medium">{stats.rankLevel}</div>
-                </motion.div>
-                <ProfileMenu user={user} />
-              </>
-            ) : (
-              <Link
-                href="/auth/login"
-                className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-medium hover:shadow-lg transition-all hover:scale-105"
-              >
-                <LogIn className="w-4 h-4" />
-                Đăng nhập
-              </Link>
-            )}
+            <Link
+              href="/auth/login"
+              className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-medium hover:shadow-lg transition-all hover:scale-105"
+            >
+              <LogIn className="w-4 h-4" />
+              Đăng nhập
+            </Link>
           </div>
         </div>
       </header>
@@ -157,7 +158,7 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Stats Cards - Nâng cấp */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -243,7 +244,7 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Quick Actions - Nâng cấp */}
+        {/* Quick Actions */}
         {!user && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -265,125 +266,6 @@ export default function Home() {
             </div>
           </motion.div>
         )}
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <Link href={user ? "/scan" : "/auth/login"}>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-3xl p-6 shadow-2xl flex items-center justify-between group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                  <QrCode className="w-8 h-8" />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-xl mb-1">Quét QR</div>
-                  <div className="text-sm opacity-90">Mượn hoặc trả ly nhanh chóng</div>
-                </div>
-              </div>
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform relative z-10" />
-            </motion.button>
-          </Link>
-
-          <Link href={user ? "/wallet" : "/auth/login"}>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-white text-dark-800 rounded-3xl p-6 shadow-xl flex items-center justify-between group border-2 border-primary-100 hover:border-primary-300 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl flex items-center justify-center">
-                  <Wallet className="w-8 h-8 text-primary-600" />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-xl mb-1">Ví điện tử</div>
-                  <div className="text-sm text-dark-500 font-medium">
-                    {stats.totalCupsSaved > 0
-                      ? `${(stats.totalCupsSaved * 20000).toLocaleString('vi-VN')} đ`
-                      : 'Nạp tiền ngay'}
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-6 h-6 text-dark-400 group-hover:translate-x-2 transition-transform" />
-            </motion.button>
-          </Link>
-
-          <Link href={user ? "/leaderboard" : "/auth/login"}>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-white text-dark-800 rounded-3xl p-6 shadow-xl flex items-center justify-between group border-2 border-yellow-100 hover:border-yellow-300 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-yellow-600" />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-xl mb-1">Bảng xếp hạng</div>
-                  <div className="text-sm text-dark-500 font-medium">Xem ai sống xanh nhất</div>
-                </div>
-              </div>
-              <ArrowRight className="w-6 h-6 text-dark-400 group-hover:translate-x-2 transition-transform" />
-            </motion.button>
-          </Link>
-
-          <Link href={user ? "/map" : "/auth/login"}>
-            <motion.button
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-white text-dark-800 rounded-3xl p-6 shadow-xl flex items-center justify-between group border-2 border-blue-100 hover:border-blue-300 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center">
-                  <MapPin className="w-8 h-8 text-blue-600" />
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-xl mb-1">Bản đồ Eco</div>
-                  <div className="text-sm text-dark-500 font-medium">Tìm điểm mượn/trả gần bạn</div>
-                </div>
-              </div>
-              <ArrowRight className="w-6 h-6 text-dark-400 group-hover:translate-x-2 transition-transform" />
-            </motion.button>
-          </Link>
-        </div>
-
-        {/* Impact Message - Nâng cấp */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 text-white rounded-3xl p-8 shadow-2xl relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)]" />
-          <div className="relative text-center">
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              className="text-6xl mb-4 inline-block"
-            >
-              🌍
-            </motion.div>
-            <div className="font-bold text-2xl mb-2">
-              Bạn đã giảm {stats.totalPlasticReduced}g nhựa!
-            </div>
-            <div className="text-lg opacity-90 mb-4">
-              Mỗi ly = 450 năm ô nhiễm được ngăn chặn
-            </div>
-            <div className="flex items-center justify-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <Leaf className="w-5 h-5" />
-                <span>{stats.totalCupsSaved} ly cứu</span>
-              </div>
-              <div className="w-1 h-1 bg-white/50 rounded-full" />
-              <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                <span>{stats.greenPoints} điểm</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </main>
 
       {/* Chat AI */}
@@ -391,4 +273,3 @@ export default function Home() {
     </div>
   );
 }
-

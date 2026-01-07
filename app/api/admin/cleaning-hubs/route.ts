@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             .from('cleaning_hubs')
             .select(`
                 *,
-                manager:admins(user_id)
+                manager:admins(admin_id)
             `)
             .order('name', { ascending: true });
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {

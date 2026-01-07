@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
@@ -14,6 +14,7 @@ export function useSupabaseRealtime<T>(
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const supabase = createClient();
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -100,6 +101,7 @@ export function useSupabaseRealtimeRecord<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const supabase = createClient();
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -158,4 +160,3 @@ export function useSupabaseRealtimeRecord<T>(
 
   return { data, loading, error };
 }
-

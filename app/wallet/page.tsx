@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import FallingLeaves from '@/components/FallingLeaves';
+import SocialLayout from '@/components/social/SocialLayout';
 
 export default function WalletPage() {
   const router = useRouter();
@@ -22,17 +23,20 @@ export default function WalletPage() {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
 
+  const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
       const currentUser = await getCurrentUser();
       if (currentUser) {
+        setUser(currentUser);
         setUserId((currentUser as any).id || (currentUser as any).user_id);
         setLoading(false);
       } else {
         const unsubscribe = onAuthChange((user) => {
           if (user) {
+            setUser(user);
             setUserId((user as any).id || (user as any).user_id);
             setLoading(false);
           } else {
@@ -49,7 +53,7 @@ export default function WalletPage() {
     if (!userId) return;
 
     try {
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       const headers: Record<string, string> = {};
       if (session?.access_token) {
@@ -130,13 +134,8 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
-        <h1 className="text-xl font-semibold text-dark-800">Ví điện tử</h1>
-      </header>
-
-      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+    <SocialLayout user={user}>
+      <div className="max-w-md mx-auto space-y-6">
         {/* Wallet Card - Nâng cấp */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -214,7 +213,7 @@ export default function WalletPage() {
                   onClick={() => setSelectedBank(selectedBank === 'VNPAYQR' ? '' : 'VNPAYQR')}
                   className={`py-2 px-2 rounded-lg border text-xs font-medium transition flex flex-col items-center justify-center gap-1 h-20 ${selectedBank === 'VNPAYQR' ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                 >
-                  <div className="bg-white p-1 rounded border border-gray-100"><Image src="https://sandbox.vnpayment.vn/paymentv2/Images/bank/VNPAYQR.png" alt="QR" width={24} height={24} className="object-contain" onError={(e) => e.currentTarget.style.display = 'none'} /></div>
+                  <div className="bg-white p-1 rounded border border-gray-100"><Image src="/images/vnpay_logo.png" alt="QR" width={24} height={24} className="object-contain" /></div>
                   VNPAY QR
                 </button>
                 <button
@@ -301,8 +300,8 @@ export default function WalletPage() {
 
         {/* Transaction History */}
         <TransactionHistory userId={userId} />
-      </main>
-    </div>
+      </div>
+    </SocialLayout>
   );
 }
 

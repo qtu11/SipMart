@@ -2,11 +2,27 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [
-      'firebasestorage.googleapis.com',
-      'sandbox.vnpayment.vn',
-      'lh3.googleusercontent.com',
-      'avatars.githubusercontent.com',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'sandbox.vnpayment.vn',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co', // Added to support Supabase Storage
+      },
     ],
   },
   env: {

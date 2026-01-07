@@ -1,7 +1,10 @@
-import { supabase } from './client';
+import { createClient } from './client';
 // We do not import createUser/admin utils here anymore to avoid client-side leakage of server logic
 import { isAdminEmail } from './admin';
 import { logger } from '../logger';
+
+// Helper to get client instance
+const getSupabase = () => createClient();
 
 /**
  * Đăng ký với email/password
@@ -14,6 +17,7 @@ export async function signUpWithEmail(
   captchaToken?: string
 ) {
   try {
+    const supabase = getSupabase();
     // Sign up với Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -72,6 +76,7 @@ export async function signUpWithEmail(
  */
 export async function signInWithEmail(email: string, password: string, captchaToken?: string) {
   try {
+    const supabase = getSupabase();
     // Step 1: Try direct login
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -114,16 +119,6 @@ export async function signInWithEmail(email: string, password: string, captchaTo
 async function ensureUserRecordsViaApi(userId: string, email: string) {
   try {
     // We reuse the post-register API as it's idempotent (creates if missing)
-    // We don't have displayName/studentId on login easily if they aren't in metadata, 
-    // but the API handles missing fields gracefully (updateUser vs createUser)
-    // Actually post-register calls createUser which handles insert. It might fail if already exists?
-    // createUser in users.ts uses .insert(). If conflict?
-    // users.ts createUser: .insert({...}).single(). 
-    // It does NOT use upsert. It will duplicate key error if exists.
-    // However, the API checks isAdmin and calls createOrUpdateAdmin (upsert).
-    // createUser logic in API needs to handle "already exists".
-    // 
-    // Let's just try calling it. If it fails due to PK conflict, it means user exists. Good.
     await fetch('/api/auth/post-register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,6 +137,7 @@ async function ensureUserRecordsViaApi(userId: string, email: string) {
  */
 export async function signInWithGoogle() {
   try {
+    const supabase = getSupabase();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -161,6 +157,7 @@ export async function signInWithGoogle() {
  * Đăng xuất
  */
 export async function signOutUser() {
+  const supabase = getSupabase();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
@@ -169,6 +166,7 @@ export async function signOutUser() {
  * Lắng nghe thay đổi auth state
  */
 export function onAuthChange(callback: (user: any | null) => void) {
+  const supabase = getSupabase();
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     callback(session?.user || null);
   });
@@ -183,6 +181,7 @@ export function onAuthChange(callback: (user: any | null) => void) {
  */
 export async function getCurrentUserAsync() {
   try {
+    const supabase = getSupabase();
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
       return null;

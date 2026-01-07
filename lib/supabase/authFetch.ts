@@ -1,10 +1,11 @@
-import { supabase } from './client';
+import { createClient } from './client';
 
 /**
  * Get auth headers with Bearer token for API calls
  * Use this in all admin API fetch requests
  */
 export async function getAuthHeaders(): Promise<HeadersInit> {
+    const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
     const headers: HeadersInit = {

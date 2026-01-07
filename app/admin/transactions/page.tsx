@@ -34,7 +34,7 @@ export default function TransactionsManagementPage() {
             const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
-            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
             const query = new URLSearchParams({
                 page: pagination.page.toString(),
@@ -89,7 +89,7 @@ export default function TransactionsManagementPage() {
             const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
-            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
             const res = await fetch('/api/admin/transactions', {
                 method: 'PATCH',

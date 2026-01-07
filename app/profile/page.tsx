@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, GraduationCap, Calendar, Award, Edit2, Camera } from 'lucide-react';
-import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
+import { User, Mail, GraduationCap, Calendar, Award, Edit2, Camera, LogOut } from 'lucide-react';
+import { getCurrentUserAsync, onAuthChange, signOutUser } from '@/lib/supabase/auth';
 import { UserProfile } from '@/lib/types/api';
 import { logger } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
-import { getUser } from '@/lib/supabase/users';
+import { getUser, updateUser } from '@/lib/supabase/users';
+import { uploadAvatar } from '@/lib/supabase/storage';
 import toast from 'react-hot-toast';
+import SocialLayout from '@/components/social/SocialLayout';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -73,6 +77,55 @@ export default function ProfilePage() {
     };
   }, [router]);
 
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      toast.success('Đã đăng xuất thành công');
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Đăng xuất thất bại');
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh không được vượt quá 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const userId = (user as any).id || (user as any).user_id;
+
+      const publicUrl = await uploadAvatar(file, userId);
+
+      // Update user profile in DB
+      await updateUser(userId, { avatar: publicUrl });
+
+      // Update local state is tricky because updateUser returns the updated object
+      setUserData((prev: any) => ({ ...prev, avatar: publicUrl }));
+
+      toast.success('Cập nhật ảnh đại diện thành công');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật ảnh đại diện');
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
@@ -90,13 +143,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
-        <h1 className="text-xl font-semibold text-dark-800">Hồ sơ</h1>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <SocialLayout user={user}>
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Profile Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -108,12 +156,35 @@ export default function ProfilePage() {
           }} />
 
           <div className="relative flex items-center gap-6">
-            <div className="relative">
-              <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30">
-                <User className="w-12 h-12" />
+            <div className="relative group">
+              <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30 overflow-hidden">
+                {userData?.avatar ? (
+                  <img
+                    src={userData.avatar}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12" />
+                )}
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 bg-white text-primary-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition">
-                <Camera className="w-4 h-4" />
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={handleAvatarClick}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-white text-primary-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition cursor-pointer disabled:opacity-70"
+              >
+                {uploading ? (
+                  <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
               </button>
             </div>
 
@@ -134,6 +205,14 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            <button
+              onClick={handleLogout}
+              className="absolute top-0 right-0 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+              title="Đăng xuất"
+            >
+              <LogOut className="w-5 h-5 text-white" />
+            </button>
           </div>
         </motion.div>
 
@@ -241,8 +320,7 @@ export default function ProfilePage() {
             Chỉnh sửa hồ sơ
           </button>
         </motion.div>
-      </main>
-    </div>
+      </div>
+    </SocialLayout>
   );
 }
-

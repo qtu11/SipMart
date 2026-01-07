@@ -28,7 +28,7 @@ export async function PATCH(
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -126,15 +126,21 @@ export async function DELETE(
         const supabase = getSupabaseAdmin();
 
         // Check admin
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -199,15 +205,21 @@ export async function GET(
         const supabase = getSupabaseAdmin();
 
         // Check admin
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {

@@ -58,7 +58,7 @@ export default function AdminDashboard() {
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
       const email = adminKey.split(',')[0].trim();
 
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       const res = await fetch('/api/admin/analytics', {
         headers: {
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
       const email = adminKey.split(',')[0].trim();
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       const res = await fetch('/api/admin/cups', {
         method: 'POST',
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
       const email = adminKey.split(',')[0].trim();
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       const res = await fetch(`/api/admin/cups?storeId=${storeId}`, {
         headers: {

@@ -28,7 +28,7 @@ export async function GET(
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -80,7 +80,7 @@ export async function PATCH(
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -145,7 +145,7 @@ export async function DELETE(
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {

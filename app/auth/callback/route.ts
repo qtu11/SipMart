@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { createUser } from '@/lib/supabase/users';
 import { isAdminEmail, createOrUpdateAdmin } from '@/lib/supabase/admin';
 
@@ -9,6 +9,7 @@ import { isAdminEmail, createOrUpdateAdmin } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const supabase = createClient();
 
   if (code) {
     try {
@@ -23,16 +24,16 @@ export async function GET(request: NextRequest) {
       if (data.user) {
         const userId = data.user.id;
         const email = data.user.email || '';
-        const displayName = data.user.user_metadata?.display_name || 
-                          data.user.user_metadata?.full_name || 
-                          data.user.user_metadata?.name ||
-                          email.split('@')[0];
+        const displayName = data.user.user_metadata?.display_name ||
+          data.user.user_metadata?.full_name ||
+          data.user.user_metadata?.name ||
+          email.split('@')[0];
 
         // Nếu là admin email, tạo/update admin document
         if (isAdminEmail(email)) {
           try {
             await createOrUpdateAdmin(userId, email, displayName, 'super_admin');
-            
+
           } catch (adminError) {
             console.error('❌ Error creating admin:', adminError);
             // Continue even if admin creation fails
@@ -44,29 +45,27 @@ export async function GET(request: NextRequest) {
           const { getUser } = await import('@/lib/supabase/users');
           const existingUser = await getUser(userId);
           if (!existingUser) {
-            
+
             await createUser(userId, email, displayName);
-            
+
           } else {
-            
+
           }
         } catch (userError: any) {
           console.error('❌ Error creating user:', userError);
-          // Nếu là lỗi duplicate, không cần throw
           if (userError.code === '23505' || userError.message?.includes('duplicate')) {
             console.warn('⚠️ User document already exists, continuing...');
           } else {
-            // Log error nhưng vẫn redirect (user đã được tạo trong auth)
             console.error('⚠️ User document creation failed, but auth user exists');
           }
         }
 
         // Redirect based on admin status
         if (isAdminEmail(email)) {
-          
+
           return NextResponse.redirect(new URL('/admin', requestUrl.origin));
         } else {
-          
+
           return NextResponse.redirect(new URL('/', requestUrl.origin));
         }
       } else {
@@ -81,4 +80,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect(new URL('/auth/login', requestUrl.origin));
 }
-

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
@@ -20,6 +20,7 @@ export function useSupabaseNotifications(userId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const supabase = createClient();
 
   useEffect(() => {
     if (!userId) {
@@ -151,4 +152,3 @@ export function useSupabaseNotifications(userId: string | null) {
     deleteNotification,
   };
 }
-

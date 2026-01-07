@@ -58,7 +58,7 @@ export default function UsersManagementPage() {
     if (!editingUser) return;
 
     try {
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
@@ -97,7 +97,7 @@ export default function UsersManagementPage() {
   const fetchUsers = useCallback(async () => {
     try {
       // Try to get admin credentials from user session first
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
 
       // Use admin credentials from env if available (fallback/legacy)
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';

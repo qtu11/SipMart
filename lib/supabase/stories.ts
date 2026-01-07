@@ -96,6 +96,7 @@ export async function getStories(userId?: string): Promise<Story[]> {
         .from('stories')
         .select('*')
         .gt('expires_at', now.toISOString())
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
     if (userId) {

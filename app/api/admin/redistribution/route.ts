@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
                 *,
                 from_store:stores!redistribution_orders_from_store_id_fkey(name),
                 to_store:stores!redistribution_orders_to_store_id_fkey(name),
-                creator:admins(user_id)
+                creator:admins(admin_id)
             `)
             .order('created_at', { ascending: false });
 
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
-            .eq('user_id', user.id)
+            .eq('admin_id', user.id)
             .single();
 
         if (!admin) {
