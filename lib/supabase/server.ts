@@ -7,17 +7,26 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 // Server-side Supabase client with service role (bypasses RLS)
 // Only create client if URL is provided, otherwise return null
 function createSupabaseAdmin() {
+  // Prevent client-side execution to avoid White Screen errors
+  if (typeof window !== 'undefined') {
+    return null;
+  }
+
   if (!supabaseUrl) {
-    throw new Error(
-      '⚠️ NEXT_PUBLIC_SUPABASE_URL is not set. Please add it to .env.local'
-    );
+    // Only throw logs in development/build to avoid hard crashes if possible, 
+    // but better to throw if misconfigured on server.
+    // Yet for safety against build crashes:
+    console.error('⚠️ NEXT_PUBLIC_SUPABASE_URL is not set.');
+    return null;
   }
 
   if (!supabaseServiceRoleKey) {
-    throw new Error(
-      '⚠️ SUPABASE_SERVICE_ROLE_KEY is not set. Server operations require service role key. ' +
-      'Add SUPABASE_SERVICE_ROLE_KEY to .env.local (NOT NEXT_PUBLIC_)'
+    console.error(
+      '⚠️ SUPABASE_SERVICE_ROLE_KEY is not set. Service role operations will fail. ' +
+      'Add it to Vercel Environment Variables.'
     );
+    // Don't throw immediately to allow app to start, but admin ops will fail.
+    return null;
   }
 
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
