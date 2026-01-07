@@ -8,7 +8,7 @@
 
 ```
 Production: https://cupsipsmart.com/api
-Development: http://localhost:3000/api
+Development: https://cupsipmart-uefedu-qt.vercel.app/api
 ```
 
 ---

@@ -90,8 +90,8 @@ NEXT_PUBLIC_ADMIN_PASSWORD=qtusdev
 
 3. **Set Site URL**
    - Dashboard → Authentication → URL Configuration
-   - Site URL: `http://localhost:3000` (dev) or your production URL
-   - Redirect URLs: Add `http://localhost:3000/**` and production URLs
+   - Site URL: `https://cupsipmart-uefedu-qt.vercel.app` (dev) or your production URL
+   - Redirect URLs: Add `https://cupsipmart-uefedu-qt.vercel.app/**` and production URLs
 
 ### Optional: Add Sample Data
 
@@ -110,7 +110,7 @@ After setup, test these endpoints:
 
 ```bash
 # Health check
-curl http://localhost:3000/api/stores
+curl https://cupsipmart-uefedu-qt.vercel.app/api/stores
 
 # Should return list of stores
 ```
@@ -145,8 +145,8 @@ The helpers in `lib/supabase/server.ts` use `getSupabaseAdmin()` which bypasses 
 After database is set up:
 
 1. Start dev server: `npm run dev`
-2. Test registration at `http://localhost:3000/auth/register`
-3. Test login at `http://localhost:3000/auth/login`
+2. Test registration at `https://cupsipmart-uefedu-qt.vercel.app/auth/register`
+3. Test login at `https://cupsipmart-uefedu-qt.vercel.app/auth/login`
 4. Test admin login with credentials from README
 
 ---

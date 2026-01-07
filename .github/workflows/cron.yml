@@ -9,7 +9,7 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 env:
-  APP_URL: https://cupsipmart-edu-uef.vercel.app
+  APP_URL: https://cupsipmart-uefedu-qt.vercel.app
   CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
 jobs:

@@ -144,7 +144,7 @@ npm run build
 npm run start
 ```
 
-Visit `http://localhost:3000` and test your application.
+Visit `https://cupsipmart-uefedu-qt.vercel.app` and test your application.
 
 ## 🔍 Verification Checklist
 

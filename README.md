@@ -357,7 +357,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 URL_APP=https://cupsipmart-nqt-uef-edu.vercel.app/
 
 # App Config
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://cupsipmart-uefedu-qt.vercel.app
 NEXT_PUBLIC_DEPOSIT_AMOUNT=20000
 NEXT_PUBLIC_BORROW_DURATION_HOURS=24
 
@@ -391,7 +391,7 @@ RESEND_API_KEY=your_resend_key
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000)
+Mở [https://cupsipmart-uefedu-qt.vercel.app](https://cupsipmart-uefedu-qt.vercel.app)
 
 ### **7. Build Production**
 ```bash

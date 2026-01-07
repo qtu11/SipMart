@@ -52,7 +52,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
 
 # App Configuration
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://cupsipmart-uefedu-qt.vercel.app
 NEXT_PUBLIC_DEPOSIT_AMOUNT=20000
 NEXT_PUBLIC_BORROW_DURATION_HOURS=24
 
@@ -197,7 +197,7 @@ Tạo collection `stores` với document mẫu:
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000)
+Mở [https://cupsipmart-uefedu-qt.vercel.app](https://cupsipmart-uefedu-qt.vercel.app)
 
 ## Bước 9: Test Flow
 

@@ -63,7 +63,7 @@ CRON_SECRET=your-random-secret
 RESEND_API_KEY=your-resend-key
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://cupsipmart-uefedu-qt.vercel.app
 ```
 
 ---
@@ -93,7 +93,7 @@ npx supabase db push
 npm run dev
 ```
 
-Mở trình duyệt: http://localhost:3000
+Mở trình duyệt: https://cupsipmart-uefedu-qt.vercel.app
 
 ---
 
@@ -110,11 +110,11 @@ npm run start
 
 ```bash
 # Check overdue
-curl -X POST http://localhost:3000/api/cron/check-overdue \
+curl -X POST https://cupsipmart-uefedu-qt.vercel.app/api/cron/check-overdue \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 
 # Due reminders
-curl -X POST http://localhost:3000/api/cron/due-reminders \
+curl -X POST https://cupsipmart-uefedu-qt.vercel.app/api/cron/due-reminders \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 

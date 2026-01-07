@@ -162,11 +162,11 @@ testConcurrentBorrows();
 ### Test 2: API Endpoint Test
 ```bash
 # Test borrow endpoint with concurrent requests
-curl -X POST http://localhost:3000/api/borrow \
+curl -X POST https://cupsipmart-uefedu-qt.vercel.app/api/borrow \
   -H "Content-Type: application/json" \
   -d '{"userId": "user1", "cupId": "cup123", "storeId": "store1"}' &
 
-curl -X POST http://localhost:3000/api/borrow \
+curl -X POST https://cupsipmart-uefedu-qt.vercel.app/api/borrow \
   -H "Content-Type: application/json" \
   -d '{"userId": "user2", "cupId": "cup123", "storeId": "store1"}' &
 ```
