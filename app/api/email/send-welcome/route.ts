@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
               </ul>
               
               <p style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-edu-uef.vercel.app'}" class="button">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}" class="button">
                   Bắt đầu ngay
                 </a>
               </p>
@@ -80,7 +80,7 @@ Với CupSipMart, bạn có thể:
 - Theo dõi tác động môi trường của bạn
 - Tham gia bảng xếp hạng sống xanh
 
-Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-edu-uef.vercel.app'}
+Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}
 
 Mẹo: Nạp tiền vào ví để sẵn sàng mượn ly. Mỗi ly cần cọc 20,000đ và sẽ được hoàn lại khi bạn trả ly!
 

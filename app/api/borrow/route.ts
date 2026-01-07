@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
 
     // Gửi email thông báo mượn ly (async, không block response)
     if (user.email) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-edu-uef.vercel.app';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app';
       fetch(`${appUrl}/api/email/send-borrow-notification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

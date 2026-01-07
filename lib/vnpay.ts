@@ -25,8 +25,8 @@ export const vnpayConfig = {
     tmnCode: process.env.VNP_TMN_CODE || '',
     hashSecret: process.env.VNP_HASH_SECRET || '',
     url: process.env.VNP_URL || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
-    returnUrl: process.env.VNP_RETURN_URL || 'https://cupsipmart-edu-uef.vercel.app/payment/vnpay-return',
-    ipnUrl: process.env.VNP_IPN_URL || 'https://cupsipmart-edu-uef.vercel.app/api/payment/vnpay-ipn',
+    returnUrl: process.env.VNP_RETURN_URL || 'https://cupsipmart-uefedu-qt.vercel.app/payment/vnpay-return',
+    ipnUrl: process.env.VNP_IPN_URL || 'https://cupsipmart-uefedu-qt.vercel.app/api/payment/vnpay-ipn',
 };
 
 // VNPay IP whitelist for IPN verification
