@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, Circle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
 
 interface RightSidebarProps {
     onChatSelect?: (contact: any) => void;
@@ -10,27 +11,21 @@ interface RightSidebarProps {
 export default function RightSidebar({ onChatSelect }: RightSidebarProps) {
     const [contacts, setContacts] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const supabase = createClient();
     const router = useRouter();
 
-    useEffect(() => {
-        fetchContacts();
-    }, [searchTerm]);
-
-    const fetchContacts = async () => {
+    const fetchContacts = useCallback(async () => {
         if (!searchTerm.trim()) {
-            // Default list if no search
+            const { data: userData } = await supabase.auth.getUser();
             const { data } = await supabase
                 .from('users')
                 .select('user_id, display_name, avatar, rank_level')
-                .neq('user_id', await supabase.auth.getUser().then(r => r.data.user?.id)) // Exclude self
+                .neq('user_id', userData.user?.id) // Exclude self
                 .limit(10);
 
             if (data) mapContacts(data);
             return;
         }
 
-        // Search via RPC
         const { data, error } = await supabase
             .rpc('search_users', { search_term: searchTerm });
 
@@ -39,7 +34,11 @@ export default function RightSidebar({ onChatSelect }: RightSidebarProps) {
         } else if (data) {
             mapContacts(data);
         }
-    };
+    }, [searchTerm]);
+
+    useEffect(() => {
+        fetchContacts();
+    }, [fetchContacts]);
 
     const mapContacts = (data: any[]) => {
         const mapped = data.map(u => ({

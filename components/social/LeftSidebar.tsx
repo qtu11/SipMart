@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Map, Wallet, TreeDeciduous, Trophy, Calendar, ScanLine } from 'lucide-react';
+import NextImage from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 interface SidebarItemProps {
     icon: React.ReactNode;
@@ -24,31 +26,77 @@ const SidebarItem = ({ icon, label, href, active }: SidebarItemProps) => (
 );
 
 export default function LeftSidebar({ user }: { user: any }) {
+    const [stats, setStats] = useState({
+        total_cups_saved: 0,
+        green_points: 0,
+        rank_level: 'seed',
+        display_name: ''
+    });
+
+    useEffect(() => {
+        const fetchUserStats = async () => {
+            if (!user?.id) return;
+
+            const { data, error } = await supabase
+                .from('users')
+                .select('total_cups_saved, green_points, rank_level, display_name')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data && !error) {
+                setStats(data);
+            }
+        };
+
+        fetchUserStats();
+    }, [user?.id]);
+
+    const rankEmojis: Record<string, string> = {
+        seed: '🌱',
+        sprout: '🌿',
+        sapling: '🌳',
+        tree: '🌲',
+        forest: '🌍',
+    };
+
+    const rankLabels: Record<string, string> = {
+        seed: 'Seed Rank',
+        sprout: 'Sprout Rank',
+        sapling: 'Sapling Rank',
+        tree: 'Tree Rank',
+        forest: 'Forest Rank',
+    };
+
     return (
         <div className="space-y-6">
             {/* Short Profile Card */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-3 mb-4">
-                    <img
-                        src={user?.avatar_url || `https://ui-avatars.com/api/?name=${user?.name || 'User'}`}
-                        alt="Profile"
-                        className="w-12 h-12 rounded-full border-2 border-green-100"
-                    />
+                    <div className="relative w-12 h-12 rounded-full border-2 border-green-100 overflow-hidden">
+                        <NextImage
+                            src={user?.avatar_url || (user?.id && `https://ui-avatars.com/api/?name=${stats.display_name || user?.email || 'User'}`) || '/placeholder-avatar.png'}
+                            alt={stats.display_name || "User profile"}
+                            fill
+                            className="object-cover"
+                        />
+                    </div>
                     <div>
-                        <h3 className="font-bold text-gray-800">{user?.name || 'Sinh viên'}</h3>
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium border border-green-100">
-                            🌱 Sprout Rank
+                        <h3 className="font-bold text-gray-800 truncate max-w-[150px]">
+                            {stats.display_name || user?.user_metadata?.full_name || 'Sinh viên'}
+                        </h3>
+                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium border border-green-100 uppercase">
+                            {rankEmojis[stats.rank_level] || '🌱'} {rankLabels[stats.rank_level] || 'Seed Rank'}
                         </span>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center text-sm">
                     <div className="bg-gray-50 rounded-lg p-2">
-                        <div className="font-bold text-gray-800">12</div>
-                        <div className="text-xs text-gray-500">Ly đã cứu</div>
+                        <div className="font-bold text-gray-800">{stats.total_cups_saved || 0}</div>
+                        <div className="text-[10px] text-gray-500">Ly đã cứu</div>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2">
-                        <div className="font-bold text-gray-800">158</div>
-                        <div className="text-xs text-gray-500">Điểm xanh</div>
+                        <div className="font-bold text-gray-800">{stats.green_points || 0}</div>
+                        <div className="text-[10px] text-gray-500">Điểm xanh</div>
                     </div>
                 </div>
             </div>

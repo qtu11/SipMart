@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Image as ImageIcon, Smile, MoreHorizontal, Phone, Video } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 
 interface ChatWindowProps {
@@ -22,7 +22,6 @@ export default function ChatWindow({ conversationId, onClose, currentUserId, oth
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const supabase = createClient();
 
     useEffect(() => {
         // Fetch initial messages

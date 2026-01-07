@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
         // 3. Calculate commission
         let commission_amount = 0;
-        let fixed_fee = Number(contract.fixed_fee) || 0;
+        const fixed_fee = Number(contract.fixed_fee) || 0;
 
         if (contract.contract_type === 'revenue_share' || contract.contract_type === 'hybrid') {
             commission_amount = total_revenue * (Number(contract.commission_rate) / 100);

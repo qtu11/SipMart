@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Image, MapPin, Smile, Send, Heart, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Image as ImageIcon, MapPin, Smile, Send, Heart, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import NextImage from 'next/image';
 
 export default function Feed({ user }: { user: any }) {
     const [postText, setPostText] = useState('');
@@ -18,7 +19,6 @@ export default function Feed({ user }: { user: any }) {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const storyInputRef = useRef<HTMLInputElement>(null);
-    const supabase = createClient();
 
     const emotions = [
         { label: 'Vui vẻ', icon: '😄' },
@@ -31,24 +31,7 @@ export default function Feed({ user }: { user: any }) {
         { label: 'Giận dữ', icon: '😡' },
     ];
 
-    useEffect(() => {
-        fetchPosts();
-        fetchStories();
-
-        // Realtime subscription
-        const channel = supabase
-            .channel('public:green_feed_posts')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'green_feed_posts' }, (payload: any) => {
-                fetchPosts();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
-
-    const fetchStories = async () => {
+    const fetchStories = useCallback(async () => {
         const { data, error } = await supabase
             .from('stories')
             .select('*')
@@ -59,7 +42,33 @@ export default function Feed({ user }: { user: any }) {
             console.error('Error fetching stories:', error);
         }
         if (data) setStories(data);
-    };
+    }, []);
+
+    const fetchPosts = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('green_feed_posts')
+                .select(`
+                    *,
+                    is_liked: post_likes!left(user_id)
+                `)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (error) throw error;
+
+            const formattedPosts = data.map((post: any) => ({
+                ...post,
+                is_liked: post.is_liked && post.is_liked.length > 0
+            }));
+
+            setPosts(formattedPosts);
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     const handleCreateStoryClick = () => {
         storyInputRef.current?.click();
@@ -84,7 +93,7 @@ export default function Feed({ user }: { user: any }) {
                     type: 'image',
                     content: base64Content,
                     thumbnail: base64Content,
-                    display_name: user?.user_metadata?.full_name || 'Người dùng',
+                    display_name: user?.user_metadata?.full_name || user?.user_metadata?.name || 'Người dùng',
                     avatar: user?.user_metadata?.avatar_url,
                     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     status: 'pending'
@@ -101,31 +110,22 @@ export default function Feed({ user }: { user: any }) {
         reader.readAsDataURL(file);
     };
 
-    const fetchPosts = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('green_feed_posts')
-                .select(`
-                    *,
-                    is_liked: post_likes!left(user_id)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(20);
+    useEffect(() => {
+        fetchPosts();
+        fetchStories();
 
-            if (error) throw error;
+        // Realtime subscription
+        const channel = supabase
+            .channel('public:green_feed_posts')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'green_feed_posts' }, (payload: any) => {
+                fetchPosts();
+            })
+            .subscribe();
 
-            const formattedPosts = data.map((post: any) => ({
-                ...post,
-                is_liked: post.is_liked && post.is_liked.length > 0
-            }));
-
-            setPosts(formattedPosts);
-        } catch (error) {
-            console.error('Error fetching posts:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchPosts, fetchStories]);
 
     const handleImageClick = () => {
         fileInputRef.current?.click();
@@ -191,7 +191,7 @@ export default function Feed({ user }: { user: any }) {
 
     const handleLike = async (postId: string, currentLikeStatus: boolean) => {
         // Optimistic UI update
-        setPosts(prev => prev.map(p =>
+        setPosts((prev: any[]) => prev.map((p: any) =>
             p.post_id === postId
                 ? { ...p, likes: (p.likes || 0) + (currentLikeStatus ? -1 : 1), is_liked: !currentLikeStatus }
                 : p
@@ -241,7 +241,7 @@ export default function Feed({ user }: { user: any }) {
                     </div>
 
                     {/* Friends Stories */}
-                    {stories.map((story) => (
+                    {stories.map((story: any) => (
                         <div
                             key={story.story_id}
                             className="flex-shrink-0 w-[110px] h-[190px] rounded-xl overflow-hidden cursor-pointer shadow-sm relative group border border-gray-200"
@@ -332,7 +332,7 @@ export default function Feed({ user }: { user: any }) {
                             onChange={handleFileChange}
                         />
                         <button onClick={handleImageClick} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors">
-                            <Image className="w-5 h-5 text-green-500" />
+                            <ImageIcon className="w-5 h-5 text-green-500" />
                             <span>Ảnh/Video</span>
                         </button>
                         <button onClick={handleCheckinClick} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors">
@@ -364,7 +364,7 @@ export default function Feed({ user }: { user: any }) {
                     </div>
                 )}
 
-                {posts.map((post) => (
+                {posts.map((post: any) => (
                     <motion.div
                         key={post.post_id}
                         initial={{ opacity: 0, y: 20 }}
