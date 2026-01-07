@@ -1,18 +1,20 @@
 name: Vercel Cron Workaround
 on:
   schedule:
-    - cron: '*/15 * * * *' # Chạy mỗi 15 phút
+    - cron: '*/15 * * * *' # Runs every 15 minutes
+    - cron: '0 * * * *'    # Runs every hour (needed for the Ranking trigger)
 
 jobs:
   cron:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Overdue Check
-        run: curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/check-overdue
-      
-      - name: Trigger Reminders
-        run: curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/due-reminders
+      - name: Trigger Overdue Check & Reminders
+        # This runs every 15 mins (on both schedules)
+        run: |
+          curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/check-overdue
+          curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/due-reminders
 
-      - name: Trigger Rankings (Every hour)
+      - name: Trigger Rankings
+        # This only runs when the '0 * * * *' schedule is triggered
         if: github.event.schedule == '0 * * * *'
         run: curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/refresh-rankings
