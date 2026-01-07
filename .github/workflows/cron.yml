@@ -11,10 +11,10 @@ jobs:
       - name: Trigger Overdue Check & Reminders
         # This runs every 15 mins (on both schedules)
         run: |
-          curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/check-overdue
-          curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/due-reminders
+          curl -X GET https://cupsipmart-edu-uef.vercel.app/api/cron/check-overdue
+          curl -X GET https://cupsipmart-edu-uef.vercel.app/api/cron/due-reminders
 
       - name: Trigger Rankings
         # This only runs when the '0 * * * *' schedule is triggered
         if: github.event.schedule == '0 * * * *'
-        run: curl -X GET https://cupsipmart-edu-uef-nqt.vercel.app/api/cron/refresh-rankings
+        run: curl -X GET https://cupsipmart-edu-uef.vercel.app/api/cron/refresh-rankings
