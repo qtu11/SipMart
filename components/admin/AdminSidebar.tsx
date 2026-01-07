@@ -7,10 +7,14 @@ import {
     Users,
     Store,
     ArrowLeftRight,
-    Coffee,
+    Package,
     Settings,
     Menu,
-    X
+    X,
+    Ticket,
+    Bell,
+    Sparkles,
+    Handshake
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,7 +43,27 @@ const menuItems = [
     {
         title: 'Kho Ly',
         href: '/admin/inventory',
-        icon: Coffee,
+        icon: Package,
+    },
+    {
+        title: 'Vouchers',
+        href: '/admin/vouchers',
+        icon: Ticket,
+    },
+    {
+        title: 'Thông báo',
+        href: '/admin/notifications',
+        icon: Bell,
+    },
+    {
+        title: 'Vệ sinh',
+        href: '/admin/hygiene',
+        icon: Sparkles,
+    },
+    {
+        title: 'Đối tác',
+        href: '/admin/partners',
+        icon: Handshake,
     },
     {
         title: 'Cài đặt',

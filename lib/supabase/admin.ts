@@ -126,11 +126,31 @@ export async function checkIsAdmin(userId: string, email: string): Promise<boole
 /**
  * Helper để check admin cho API Routes
  * Verify headers: x-admin-email, x-admin-password
+ * OR Verify session: Authorization Bearer token
  */
 export async function checkAdminApi(req: Request): Promise<boolean> {
+  // 1. Check Headers (Legacy/script access)
   const email = req.headers.get('x-admin-email');
   const password = req.headers.get('x-admin-password');
 
-  if (!email || !password) return false;
-  return verifyAdmin(email, password);
+  if (email && password) {
+    if (verifyAdmin(email, password)) {
+      return true;
+    }
+  }
+
+  // 2. Check Session (Recommended for Frontend)
+  try {
+    // We need to cast Request to NextRequest or ensure verifyAdminAuth handles it
+    // verifyAdminAuth imports NextRequest but uses standard Request properties usually
+    // But let's dynamically import to avoid circular dep issues if any
+    const { verifyAdminAuth } = await import('@/lib/middleware/auth');
+    // verifyAdminAuth expects NextRequest. Standard Request is compatible for headers/cookies mostly
+    // We cast it to any or NextRequest to satisfy TS
+    const result = await verifyAdminAuth(req as any);
+    return result.isAdmin;
+  } catch (error) {
+    console.error('checkAdminApi session check failed', error);
+    return false;
+  }
 }

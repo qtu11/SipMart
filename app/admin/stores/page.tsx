@@ -41,10 +41,13 @@ export default function StoresManagementPage() {
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
 
+            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
             const res = await fetch('/api/admin/stores', {
                 headers: {
                     'x-admin-email': email,
                     'x-admin-password': adminPassword,
+                    'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
                 },
             });
 
@@ -81,6 +84,8 @@ export default function StoresManagementPage() {
         return () => unsubscribe();
     }, [router, fetchStores]);
 
+    const [editingStoreId, setEditingStoreId] = useState<string | null>(null);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -89,8 +94,14 @@ export default function StoresManagementPage() {
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
 
-            const res = await fetch('/api/admin/stores', {
-                method: 'POST',
+            const url = editingStoreId
+                ? `/api/admin/stores/${editingStoreId}`
+                : '/api/admin/stores';
+
+            const method = editingStoreId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'x-admin-email': email,
@@ -100,23 +111,67 @@ export default function StoresManagementPage() {
                     ...form,
                     gpsLat: parseFloat(form.gpsLat) || 0,
                     gpsLng: parseFloat(form.gpsLng) || 0,
+                    partnerStatus: 'active'
                 }),
             });
 
             const data = await res.json();
             if (data.success) {
-                toast.success('Thêm cửa hàng thành công');
+                toast.success(editingStoreId ? 'Cập nhật thành công' : 'Thêm cửa hàng thành công');
                 setForm({ name: '', address: '', gpsLat: '', gpsLng: '' });
+                setEditingStoreId(null);
                 setIsModalOpen(false);
                 fetchStores();
             } else {
-                toast.error(data.error || 'Lỗi khi thêm cửa hàng');
+                toast.error(data.error || 'Lỗi khi lưu cửa hàng');
             }
         } catch (error) {
             toast.error('Lỗi kết nối');
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleEdit = (store: Store) => {
+        setEditingStoreId(store.storeId);
+        setForm({
+            name: store.name,
+            address: store.address,
+            gpsLat: store.gpsLat.toString(),
+            gpsLng: store.gpsLng.toString()
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (storeId: string) => {
+        if (!confirm('Bạn có chắc chắn muốn xóa (lưu trữ) cửa hàng này không?')) return;
+
+        try {
+            const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+            const email = adminKey.split(',')[0].trim();
+
+            const res = await fetch(`/api/admin/stores/${storeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'x-admin-email': email,
+                },
+            });
+
+            if (res.ok) {
+                toast.success('Đã lưu trữ cửa hàng');
+                fetchStores();
+            } else {
+                toast.error('Lỗi khi xóa');
+            }
+        } catch (error) {
+            toast.error('Lỗi kết nối');
+        }
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingStoreId(null);
+        setForm({ name: '', address: '', gpsLat: '', gpsLng: '' });
     };
 
     if (loading || !authorized) {
@@ -131,7 +186,11 @@ export default function StoresManagementPage() {
                     <p className="text-dark-500">Danh sách các điểm đối tác và tình trạng ly</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => {
+                        setEditingStoreId(null);
+                        setForm({ name: '', address: '', gpsLat: '', gpsLng: '' });
+                        setIsModalOpen(true);
+                    }}
                     className="bg-primary-500 text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-2 hover:bg-primary-600 transition"
                 >
                     <Plus className="w-5 h-5" />
@@ -178,17 +237,26 @@ export default function StoresManagementPage() {
                         </div>
 
                         <div className="mt-4 flex items-center gap-2">
-                            <button className="flex-1 px-3 py-2 bg-dark-50 text-dark-600 rounded-xl text-sm font-semibold hover:bg-dark-100 transition flex items-center justify-center gap-2">
+                            <button
+                                onClick={() => handleEdit(store)}
+                                className="flex-1 px-3 py-2 bg-dark-50 text-dark-600 rounded-xl text-sm font-semibold hover:bg-dark-100 transition flex items-center justify-center gap-2"
+                            >
                                 <Edit className="w-4 h-4" />
                                 Sửa
                             </button>
-                            {/* Future: Delete/Archive */}
+                            <button
+                                onClick={() => handleDelete(store.storeId)}
+                                className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition flex items-center justify-center"
+                                title="Lưu trữ (Xóa)"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
                         </div>
                     </motion.div>
                 ))}
             </div>
 
-            {/* Modal Add Store */}
+            {/* Modal Add/Edit Store */}
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -196,7 +264,7 @@ export default function StoresManagementPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={handleCloseModal}
                             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                         />
                         <motion.div
@@ -205,7 +273,9 @@ export default function StoresManagementPage() {
                             exit={{ opacity: 0, y: 20 }}
                             className="bg-white rounded-2xl p-6 w-full max-w-lg relative z-10 shadow-xl"
                         >
-                            <h3 className="text-xl font-bold text-dark-800 mb-4">Thêm cửa hàng mới</h3>
+                            <h3 className="text-xl font-bold text-dark-800 mb-4">
+                                {editingStoreId ? 'Cập nhật cửa hàng' : 'Thêm cửa hàng mới'}
+                            </h3>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-dark-700 mb-1">Tên cửa hàng</label>
@@ -254,7 +324,7 @@ export default function StoresManagementPage() {
                                 <div className="flex gap-3 mt-6">
                                     <button
                                         type="button"
-                                        onClick={() => setIsModalOpen(false)}
+                                        onClick={handleCloseModal}
                                         className="flex-1 px-4 py-2 border border-dark-200 text-dark-600 rounded-xl font-semibold hover:bg-dark-50"
                                     >
                                         Hủy
@@ -264,7 +334,7 @@ export default function StoresManagementPage() {
                                         disabled={isSubmitting}
                                         className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 disabled:opacity-50"
                                     >
-                                        {isSubmitting ? 'Đang lưu...' : 'Lưu cửa hàng'}
+                                        {isSubmitting ? 'Đang lưu...' : (editingStoreId ? 'Cập nhật' : 'Lưu cửa hàng')}
                                     </button>
                                 </div>
                             </form>

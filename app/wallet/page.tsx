@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import FallingLeaves from '@/components/FallingLeaves';
 
 export default function WalletPage() {
   const router = useRouter();
@@ -47,9 +49,23 @@ export default function WalletPage() {
     if (!userId) return;
 
     try {
-      const res = await fetch(`/api/wallet?userId=${userId}`);
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`/api/wallet?userId=${userId}`, {
+        headers
+      });
       const data = await res.json();
-      setWallet(data);
+      if (data && typeof data.walletBalance === 'number') {
+        setWallet(prev => ({ ...prev, ...data }));
+      } else {
+        // Provide defaults or handle missing data
+        console.warn('Invalid wallet data received', data);
+      }
     } catch (error: unknown) {
       const err = error as Error;
       toast.error('Lỗi khi tải thông tin ví');
@@ -81,6 +97,7 @@ export default function WalletPage() {
     try {
       const body: any = {
         amount,
+        userId, // Add userId to payload
         orderInfo: `Nap tien vao vi ${userId}`,
         bankCode: selectedBank || undefined
       };
@@ -106,7 +123,8 @@ export default function WalletPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -133,10 +151,10 @@ export default function WalletPage() {
               <span className="text-sm opacity-90">Số dư</span>
             </div>
             <div className="text-5xl font-bold mb-3">
-              {wallet.walletBalance.toLocaleString('vi-VN')} đ
+              {(wallet?.walletBalance ?? 0).toLocaleString('vi-VN')} đ
             </div>
             <div className="text-sm opacity-90 mb-4">
-              Đủ để mượn {Math.floor(wallet.walletBalance / 20000)} ly
+              Đủ để mượn {Math.floor((wallet?.walletBalance ?? 0) / 20000)} ly
             </div>
             <div className="flex items-center gap-2 text-xs opacity-75">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
@@ -277,7 +295,241 @@ export default function WalletPage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Withdrawal Section */}
+        <WithdrawalSection userId={userId} onSuccess={fetchWallet} />
+
+        {/* Transaction History */}
+        <TransactionHistory userId={userId} />
       </main>
     </div>
   );
+}
+
+function WithdrawalSection({ userId, onSuccess }: { userId: string | null; onSuccess: () => void }) {
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  const handleWithdraw = async () => {
+    if (!userId) return;
+
+    if (!withdrawAmount || parseInt(withdrawAmount) < 50000) {
+      toast.error('Số tiền rút tối thiểu 50.000đ');
+      return;
+    }
+
+    if (!bankAccount.trim()) {
+      toast.error('Vui lòng nhập số tài khoản');
+      return;
+    }
+
+    if (!bankName.trim()) {
+      toast.error('Vui lòng nhập tên ngân hàng');
+      return;
+    }
+
+    if (!accountName.trim()) {
+      toast.error('Vui lòng nhập tên chủ tài khoản');
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const res = await fetch('/api/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          amount: parseInt(withdrawAmount),
+          bankName,
+          accountNumber: bankAccount,
+          accountName
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setWithdrawAmount('');
+        setBankAccount('');
+        setBankName('');
+        setAccountName('');
+        setShowWithdraw(false);
+        onSuccess();
+      } else {
+        toast.error(data.error || 'Lỗi khi rút tiền');
+      }
+    } catch (error: any) {
+      toast.error('Lỗi kết nối');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      {!showWithdraw ? (
+        <button
+          onClick={() => setShowWithdraw(true)}
+          className="w-full bg-white text-primary-600 border-2 border-primary-500 py-3 rounded-xl font-bold hover:bg-primary-50 transition"
+        >
+          Rút tiền về tài khoản
+        </button>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-white rounded-3xl p-6 shadow-xl border border-primary-100"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-dark-800">Rút tiền</h3>
+            <button
+              onClick={() => setShowWithdraw(false)}
+              className="text-dark-400 hover:text-dark-600"
+            >
+              Đóng
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-600 mb-1">Số tiền (tối thiểu 50.000đ)</label>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder="VD: 100000"
+                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark-600 mb-1">Ngân hàng</label>
+              <input
+                type="text"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                placeholder="VD: Vietcombank, ACB..."
+                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark-600 mb-1">Số tài khoản</label>
+              <input
+                type="text"
+                value={bankAccount}
+                onChange={(e) => setBankAccount(e.target.value)}
+                placeholder="Số tài khoản ngân hàng"
+                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark-600 mb-1">Tên chủ tài khoản</label>
+              <input
+                type="text"
+                value={accountName}
+                onChange={(e) => setAccountName(e.target.value)}
+                placeholder="Tên in hoa không dấu"
+                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+              />
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={withdrawing}
+              className="w-full bg-primary-500 text-white py-3 rounded-xl font-bold hover:bg-primary-600 disabled:opacity-50 transition"
+            >
+              {withdrawing ? 'Đang xử lý...' : 'Xác nhận rút tiền'}
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+function TransactionHistory({ userId }: { userId: string | null }) {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTransactions = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/wallet/transactions?userId=${userId}&limit=20`);
+      const data = await res.json();
+      if (data.success) {
+        setTransactions(data.transactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (showTransactions && userId) {
+      fetchTransactions();
+    }
+  }, [showTransactions, userId, fetchTransactions]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5 }}
+      className="bg-white rounded-3xl p-6 shadow-xl border border-primary-100 mt-6"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-dark-800">Lịch sử giao dịch</h2>
+        <button
+          onClick={() => setShowTransactions(!showTransactions)}
+          className="text-sm text-primary-600 font-semibold hover:text-primary-700"
+        >
+          {showTransactions ? 'Ẩn' : 'Xem'}
+        </button>
+      </div>
+
+      {showTransactions && (
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          {loading ? (
+            <div className="text-center py-4 text-dark-500">Đang tải...</div>
+          ) : transactions.length === 0 ? (
+            <p className="text-dark-500 text-center py-4">Chưa có giao dịch nào</p>
+          ) : (
+            transactions.map((tx) => (
+              <div key={tx.transaction_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                <div>
+                  <p className="font-semibold text-dark-800 text-sm">{tx.description || getTransactionDescription(tx)}</p>
+                  <p className="text-xs text-dark-500">
+                    {new Date(tx.created_at).toLocaleString('vi-VN')}
+                  </p>
+                </div>
+                <div className={`text-sm font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {tx.amount > 0 ? '+' : ''}{Math.abs(tx.amount).toLocaleString('vi-VN')}đ
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function getTransactionDescription(tx: any) {
+  if (tx.metadata && tx.metadata.bankName) {
+    return `Rút tiền về ${tx.metadata.bankName}`;
+  }
+  switch (tx.type) {
+    case 'deposit': return 'Nạp tiền vào ví';
+    case 'withdrawal': return 'Rút tiền';
+    case 'borrow_fee': return 'Thuê ly';
+    case 'return_deposit': return 'Hoàn tiền cọc';
+    default: return 'Giao dịch';
+  }
 }

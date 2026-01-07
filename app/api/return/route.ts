@@ -89,6 +89,10 @@ export async function POST(request: NextRequest) {
     const updatedUser = await getUser(userId);
     const cupsSaved = updatedUser?.totalCupsSaved || 0;
 
+    // Check and trigger achievements
+    const { checkAndTriggerAchievements } = await import('@/lib/achievements');
+    await checkAndTriggerAchievements(userId);
+
     return jsonResponse({
       refundAmount: completedTransaction.refundAmount,
       greenPointsEarned: completedTransaction.greenPointsEarned,

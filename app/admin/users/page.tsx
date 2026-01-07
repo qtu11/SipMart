@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Users, Search, Ban, CheckCircle, Mail, Wallet, Award, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
-import { checkIsAdmin } from '@/lib/supabase/admin';
+import { checkIsAdmin, isAdminEmail } from '@/lib/supabase/admin';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -33,34 +33,108 @@ export default function UsersManagementPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const router = useRouter();
 
-  const fetchUsers = useCallback(async () => {
+  // State for Edit Modal
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    displayName: '',
+    walletBalance: 0,
+    greenPoints: 0,
+    rankLevel: 'seed',
+    totalCupsSaved: 0
+  });
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      displayName: user.displayName || '',
+      walletBalance: user.walletBalance,
+      greenPoints: user.greenPoints,
+      rankLevel: user.rankLevel,
+      totalCupsSaved: user.totalCupsSaved
+    });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingUser) return;
+
     try {
-      // Use admin credentials from env
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
-      
-      if (!adminKey || !adminPassword) {
-        throw new Error('Admin credentials not configured');
+      const email = adminKey ? adminKey.split(',')[0].trim() : '';
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      if (email && adminPassword) {
+        headers['x-admin-email'] = email;
+        headers['x-admin-password'] = adminPassword;
       }
 
-      const email = adminKey.split(',')[0].trim();
-      const res = await fetch('/api/admin/users', {
-        headers: {
-          'x-admin-email': email,
-          'x-admin-password': adminPassword,
-        },
+      const res = await fetch(`/api/admin/users/${editingUser.userId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(editForm)
       });
-      
-      if (!res.ok) throw new Error('Failed to fetch users');
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to update user');
+      }
+
+      toast.success('Cập nhật thành công');
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.message || 'Lỗi cập nhật');
+    }
+  };
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      // Try to get admin credentials from user session first
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
+      // Use admin credentials from env if available (fallback/legacy)
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+      const email = adminKey ? adminKey.split(',')[0].trim() : '';
+
+      // We need EITHER session OR admin keys
+      if (!session?.access_token && (!adminKey || !adminPassword)) {
+        throw new Error('Missing Admin Credentials (Login or Env Vars)');
+      }
+
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      if (email && adminPassword) {
+        headers['x-admin-email'] = email;
+        headers['x-admin-password'] = adminPassword;
+      }
+
+      const res = await fetch('/api/admin/users', { headers });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch users (${res.status})`);
+      }
+
       const data = await res.json();
       setUsers(data.users || []);
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Error fetching users:', error);
-      toast.error('Không thể tải danh sách users');
+      toast.error(`Lỗi tải danh sách: ${err.message}`);
     } finally {
       setLoading(false);
     }
+
   }, []);
 
   useEffect(() => {
@@ -72,7 +146,8 @@ export default function UsersManagementPage() {
       }
 
       const userId = (user as any).id || (user as any).user_id || (user as any).uid;
-      const isAdmin = await checkIsAdmin(userId, user.email || '');
+      // Use local check only for UI access - strict server check is done in API
+      const isAdmin = isAdminEmail(user.email || '');
       if (!isAdmin) {
         toast.error('Bạn không có quyền truy cập trang này');
         router.push('/');
@@ -105,7 +180,7 @@ export default function UsersManagementPage() {
       });
 
       if (!res.ok) throw new Error('Failed to blacklist user');
-      
+
       toast.success('Đã blacklist user');
       fetchUsers();
     } catch (error: unknown) {
@@ -133,7 +208,7 @@ export default function UsersManagementPage() {
       });
 
       if (!res.ok) throw new Error('Failed to unblacklist user');
-      
+
       toast.success('Đã gỡ blacklist user');
       fetchUsers();
     } catch (error: unknown) {
@@ -281,9 +356,7 @@ export default function UsersManagementPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className={`hover:bg-primary-50/50 transition ${
-                        user.isBlacklisted ? 'bg-red-50/50' : ''
-                      }`}
+                      className={`hover:bg-primary-50/50 transition ${user.isBlacklisted ? 'bg-red-50/50' : ''}`}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -343,14 +416,15 @@ export default function UsersManagementPage() {
                             Active
                           </span>
                         )}
-                        {user.blacklistCount > 0 && (
-                          <p className="text-xs text-dark-400 mt-1">
-                            {user.blacklistCount} lần
-                          </p>
-                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEditModal(user)}
+                            className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
+                          >
+                            Sửa
+                          </button>
                           {user.isBlacklisted ? (
                             <button
                               onClick={() => handleUnblacklist(user.userId)}
@@ -381,7 +455,91 @@ export default function UsersManagementPage() {
           </div>
         </div>
       </main>
+
+      {/* Edit Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-xl"
+          >
+            <h2 className="text-xl font-bold text-dark-800">Sửa thông tin User</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-dark-600">Tên hiển thị</label>
+                <input
+                  className="w-full px-3 py-2 border rounded-lg"
+                  value={editForm.displayName}
+                  onChange={e => setEditForm({ ...editForm, displayName: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-dark-600">Ví (VNĐ)</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={editForm.walletBalance}
+                    onChange={e => setEditForm({ ...editForm, walletBalance: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-dark-600">Điểm (GreenPoint)</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={editForm.greenPoints}
+                    onChange={e => setEditForm({ ...editForm, greenPoints: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-dark-600">Hạng</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={editForm.rankLevel}
+                    onChange={e => setEditForm({ ...editForm, rankLevel: e.target.value })}
+                  >
+                    <option value="seed">Seed</option>
+                    <option value="sprout">Sprout</option>
+                    <option value="sapling">Sapling</option>
+                    <option value="tree">Tree</option>
+                    <option value="forest">Forest</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-dark-600">Ly cứu</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    value={editForm.totalCupsSaved}
+                    onChange={e => setEditForm({ ...editForm, totalCupsSaved: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 text-dark-600 hover:bg-dark-50 rounded-lg"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleUpdate}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-semibold"
+              >
+                Lưu Thay Đổi
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
+
 

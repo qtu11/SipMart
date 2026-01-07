@@ -9,6 +9,8 @@ import { isAdminEmail } from '@/lib/supabase/admin';
 import toast from 'react-hot-toast';
 import StatsCard from '@/components/StatsCard';
 import { Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import FallingLeaves from '@/components/FallingLeaves';
 
 interface Cup {
   cup_id: string;
@@ -33,9 +35,18 @@ export default function InventoryPage() {
   const fetchCups = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Try to get admin credentials from user session first
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
-      const email = adminKey.split(',')[0].trim();
+      const email = adminKey ? adminKey.split(',')[0].trim() : '';
+
+      // We need EITHER session OR admin keys
+      if (!session?.access_token && (!adminKey || !adminPassword)) {
+        throw new Error('Missing Admin Credentials (Login or Env Vars)');
+      }
 
       const query = new URLSearchParams({
         page: pagination.page.toString(),
@@ -44,12 +55,26 @@ export default function InventoryPage() {
         search: filters.search
       });
 
-      const res = await fetch(`/api/admin/cups?${query}`, {
-        headers: {
-          'x-admin-email': email,
-          'x-admin-password': adminPassword,
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      if (email && adminPassword) {
+        headers['x-admin-email'] = email;
+        headers['x-admin-password'] = adminPassword;
+      }
+
+      const res = await fetch(`/api/admin/cups?${query}`, { headers });
+
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          throw new Error(errData.error || res.statusText);
+        } catch (e) {
+          throw new Error(`Failed to load cups (${res.status})`);
         }
-      });
+      }
+
       const data = await res.json();
 
       if (data.cups) {
@@ -62,8 +87,9 @@ export default function InventoryPage() {
           }));
         }
       }
-    } catch (error) {
-      toast.error('Không thể tải danh sách ly');
+    } catch (error: any) {
+      console.error('Fetch Inventory Error:', error);
+      toast.error(error.message || 'Không thể tải danh sách ly');
     } finally {
       setLoading(false);
     }
@@ -97,17 +123,27 @@ export default function InventoryPage() {
 
   const updateCupStatus = async (cupId: string, newStatus: string) => {
     try {
+      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
+
       const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
       const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
-      const email = adminKey.split(',')[0].trim();
+      const email = adminKey ? adminKey.split(',')[0].trim() : '';
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      if (email && adminPassword) {
+        headers['x-admin-email'] = email;
+        headers['x-admin-password'] = adminPassword;
+      }
 
       const res = await fetch('/api/admin/cups/status', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': email,
-          'x-admin-password': adminPassword,
-        },
+        headers,
         body: JSON.stringify({ cupId, status: newStatus })
       });
 
@@ -125,7 +161,8 @@ export default function InventoryPage() {
   if (loading && !cups.length) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -170,7 +207,7 @@ export default function InventoryPage() {
             <div key={cup.cup_id} className="bg-white p-4 rounded-xl shadow-soft border border-dark-100 flex flex-col gap-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-mono text-xs text-dark-400">#{cup.cup_id.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-dark-400">#{cup.cup_id?.slice(0, 8) || 'N/A'}</span>
                   <div className="font-semibold text-dark-800">
                     {cup.material === 'bamboo_fiber' ? 'Sợi Tre' : 'Nhựa PP'}
                   </div>

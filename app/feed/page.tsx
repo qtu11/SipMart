@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import { logger } from '@/lib/logger';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import FallingLeaves from '@/components/FallingLeaves';
 
 interface FeedPost {
   postId: string;
@@ -22,6 +24,8 @@ interface FeedPost {
   comments: FeedComment[];
   createdAt: Date;
   liked?: boolean;
+  postType?: 'normal' | 'achievement';
+  achievementType?: string;
 }
 
 interface FeedComment {
@@ -230,7 +234,8 @@ export default function FeedPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -268,7 +273,10 @@ export default function FeedPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-xl border-2 border-dark-100 overflow-hidden"
+              className={`bg-white rounded-2xl shadow-xl overflow-hidden ${post.postType === 'achievement'
+                ? 'border-4 border-yellow-400 ring-2 ring-yellow-200'
+                : 'border-2 border-dark-100'
+                }`}
             >
               {/* Header */}
               <div className="p-4 flex items-center justify-between">
@@ -300,8 +308,15 @@ export default function FeedPage() {
                     </p>
                   </div>
                 </div>
-                <div className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-semibold">
-                  +{post.greenPointsEarned} điểm
+                <div className="flex items-center gap-2">
+                  {post.postType === 'achievement' && (
+                    <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                      🏆 Thành tựu
+                    </span>
+                  )}
+                  <div className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-semibold">
+                    +{post.greenPointsEarned} điểm
+                  </div>
                 </div>
               </div>
 

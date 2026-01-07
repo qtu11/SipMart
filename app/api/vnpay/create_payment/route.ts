@@ -57,19 +57,19 @@ export async function POST(request: NextRequest) {
             '127.0.0.1';
 
         // 5. Create payment URL
+        const transactionCode = `${userId}_${Date.now()}`;
         const orderInfo = description || `Nap tien vi CupSipSmart - ${user.display_name || userId}`;
 
         const paymentUrl = createVnpayUrl({
             amount,
             orderInfo,
             ipAddr,
-            orderId: `${userId}_${Date.now()}`,
+            orderId: transactionCode,
             userId,
             bankCode,
         });
 
         // 6. Create pending payment transaction
-        const transactionCode = `${userId}_${Date.now()}`;
         await supabase.from('payment_transactions').insert({
             user_id: userId,
             type: 'topup',

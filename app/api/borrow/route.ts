@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Trừ tiền cọc
+    // TODO: SECURITY - Move this into borrowCupAtomic RPC to ensure full ACID compliance
+    // Current method uses compensation pattern (refund on fail) which has a small risk of failure during refund
     await updateWallet(userId, -actualDepositAmount);
 
     // ATOMIC: Cập nhật cup status using database RPC (prevents all race conditions)

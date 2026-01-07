@@ -2,7 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['firebasestorage.googleapis.com'],
+    domains: [
+      'firebasestorage.googleapis.com',
+      'sandbox.vnpayment.vn',
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com',
+    ],
   },
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

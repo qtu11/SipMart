@@ -1,7 +1,7 @@
 // VNPay Configuration - Production Ready
 // NO HARDCODED CREDENTIALS - All values from environment
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 // Custom stringify function (replaces querystring.stringify)
 function stringifyParams(obj: Record<string, string | number>, encode = true): string {
@@ -26,7 +26,7 @@ export const vnpayConfig = {
     hashSecret: process.env.VNP_HASH_SECRET || '',
     url: process.env.VNP_URL || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
     returnUrl: process.env.VNP_RETURN_URL || 'https://cupsipmart-uefedu-qt.vercel.app/payment/vnpay-return',
-    ipnUrl: process.env.VNP_IPN_URL || 'https://cupsipmart-uefedu-qt.vercel.app/api/payment/vnpay-ipn',
+    ipnUrl: process.env.VNP_IPN_URL || 'https://cupsipmart-uefedu-qt.vercel.app/api/payment/vnpay_ipn',
 };
 
 // VNPay IP whitelist for IPN verification
@@ -97,8 +97,18 @@ export function createVnpayUrl(params: CreateVnpayUrlParams): string {
         ('0' + date.getMinutes()).slice(-2) +
         ('0' + date.getSeconds()).slice(-2);
 
-    // FIXED: txnRef format includes userId for IPN processing
-    const txnRef = `${userId}_${Date.now()}`;
+    // Set expiration to 15 minutes from now
+    const expireDateObj = new Date(date.getTime() + 15 * 60 * 1000);
+    const expireDate =
+        expireDateObj.getFullYear().toString() +
+        ('0' + (expireDateObj.getMonth() + 1)).slice(-2) +
+        ('0' + expireDateObj.getDate()).slice(-2) +
+        ('0' + expireDateObj.getHours()).slice(-2) +
+        ('0' + expireDateObj.getMinutes()).slice(-2) +
+        ('0' + expireDateObj.getSeconds()).slice(-2);
+
+    // Use provided orderId or fallback to userId_timestamp
+    const txnRef = params.orderId || `${userId}_${Date.now()}`;
 
     const vnpParams: Record<string, string | number> = {
         vnp_Version: '2.1.0',
@@ -113,6 +123,7 @@ export function createVnpayUrl(params: CreateVnpayUrlParams): string {
         vnp_ReturnUrl: vnpayConfig.returnUrl,
         vnp_IpAddr: ipAddr,
         vnp_CreateDate: createDate,
+        vnp_ExpireDate: expireDate,
     };
 
     if (bankCode) {
@@ -120,7 +131,7 @@ export function createVnpayUrl(params: CreateVnpayUrlParams): string {
     }
 
     const sortedParams = sortObject(vnpParams) as Record<string, string | number>;
-    const signData = stringifyParams(sortedParams as Record<string, string>, false);
+    const signData = stringifyParams(sortedParams as Record<string, string>, true);
     const secureHash = generateSecureHash(signData, vnpayConfig.hashSecret);
 
     sortedParams['vnp_SecureHash'] = secureHash;
@@ -160,7 +171,7 @@ export function verifyVnpayReturn(vnpParams: Record<string, string>): VnpayRetur
     const { vnp_SecureHash: _, vnp_SecureHashType: __, ...paramsToCheck } = vnpParams;
 
     const sortedParams = sortObject(paramsToCheck) as Record<string, string>;
-    const signData = stringifyParams(sortedParams, false);
+    const signData = stringifyParams(sortedParams, true);
     const computedHash = generateSecureHash(signData, vnpayConfig.hashSecret);
 
     if (secureHash !== computedHash) {

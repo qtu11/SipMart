@@ -184,16 +184,14 @@ export async function GET(request: NextRequest) {
             margin: 2,
           });
           return {
-            cupId,
-            material,
+            ...cup,
             qrData,
             qrImage,
           };
         } catch (qrError) {
           // If QR generation fails, return without image
           return {
-            cupId,
-            material,
+            ...cup,
             qrData,
           };
         }

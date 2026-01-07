@@ -106,7 +106,7 @@ export default function FriendsPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/friends/search?studentId=${searchStudentId.trim()}`);
+      const res = await fetch(`/api/friends/search-by-student-id?studentId=${searchStudentId.trim()}`);
       const data = await res.json();
 
       if (data.success) {
@@ -117,7 +117,7 @@ export default function FriendsPage() {
           setSearchResult(data.user);
         }
       } else {
-        toast.error('Không tìm thấy người dùng');
+        toast.error(data.message || 'Không tìm thấy người dùng');
         setSearchResult(null);
       }
     } catch (error: unknown) {

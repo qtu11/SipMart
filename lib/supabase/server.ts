@@ -41,10 +41,13 @@ export const supabaseAdmin = createSupabaseAdmin();
 
 // Helper to get admin client (throws error if not configured)
 export function getSupabaseAdmin() {
+  if (typeof window !== 'undefined') {
+    throw new Error('getSupabaseAdmin() cannot be called on the client-side. Use Supabase Client instead.');
+  }
+
   if (!supabaseAdmin) {
     throw new Error(
-      'Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local. ' +
-      'See SUPABASE_SETUP.md for setup instructions.'
+      'Supabase Admin is not configured. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
     );
   }
   return supabaseAdmin;

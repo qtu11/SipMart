@@ -13,7 +13,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await acceptFriendRequest(requestId);
+    const friendship = await acceptFriendRequest(requestId);
+
+    // Trigger "First Friend" achievement for both users
+    const { checkFirstFriend } = await import('@/lib/achievements');
+    await Promise.all([
+      checkFirstFriend(friendship.userId1),
+      checkFirstFriend(friendship.userId2)
+    ]).catch(err => console.error('Error triggering achievements:', err));
 
     return NextResponse.json({
       success: true,

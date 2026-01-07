@@ -8,6 +8,8 @@ import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { logger } from '@/lib/logger';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import FallingLeaves from '@/components/FallingLeaves';
 
 interface Store {
   storeId: string;
@@ -153,7 +155,8 @@ export default function MapPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải bản đồ...</div>
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -207,6 +210,19 @@ export default function MapPage() {
               width={40}
               color="#22c55e"
             />
+
+            {/* UEF University Marker */}
+            <Marker
+              anchor={UEF_LOCATION}
+              payload="uef"
+              width={50}
+              color="#0066CC"
+            />
+            <Overlay anchor={UEF_LOCATION} offset={[0, 60]}>
+              <div className="bg-blue-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                🎓 UEF - 141 Điện Biên Phủ
+              </div>
+            </Overlay>
 
             {/* Store Markers */}
             {filteredStores.map((store) => (

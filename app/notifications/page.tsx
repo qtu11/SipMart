@@ -1,203 +1,255 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Bell, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
-import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
-import { useRouter } from 'next/navigation';
-import { useSupabaseNotifications } from '@/hooks/useSupabaseNotifications';
+import { Bell, BellDot, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { logger } from '@/lib/logger';
 
 interface Notification {
-  notification_id?: string;
-  id?: string; // For compatibility
-  type: 'success' | 'warning' | 'info' | 'reminder';
+  recipient_id: string;
+  notification_id: string;
+  type: string;
   title: string;
   message: string;
-  timestamp: string | Date;
-  read: boolean;
-  url?: string;
+  content_html: string | null;
+  emoji: string | null;
+  image_url: string | null;
+  action_url: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  received_at: string;
+  created_at: string;
 }
 
 export default function NotificationsPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const currentUser = await getCurrentUserAsync();
-      if (!currentUser) {
-        router.push('/auth/login');
-        return;
-      }
-      setUser(currentUser);
-    };
+    fetchNotifications();
+  }, []);
 
-    checkAuth();
-
-    const unsubscribe = onAuthChange((currentUser) => {
-      if (!currentUser) {
-        router.push('/auth/login');
-        return;
-      }
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  const { notifications, loading, unreadCount, markAsRead, deleteNotification } =
-    useSupabaseNotifications(user?.uid || null);
-
-  const handleMarkAsRead = async (id: string) => {
+  const fetchNotifications = async () => {
     try {
-      await markAsRead(id);
-      toast.success('Đã đánh dấu đã đọc');
-    } catch (error: unknown) {
-      const err = error as Error;
-      logger.error('Error marking as read', { error });
-      toast.error('Có lỗi xảy ra');
+      setLoading(true);
+      const res = await fetch('/api/notifications');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unread_count || 0);
+    } catch (error) {
+      console.error('Fetch notifications error:', error);
+      toast.error('Không thể tải thông báo');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleMarkAsRead = async (recipientId: string) => {
     try {
-      await deleteNotification(id);
-      toast.success('Đã xóa thông báo');
-    } catch (error: unknown) {
-      const err = error as Error;
-      logger.error('Error deleting', { error });
-      toast.error('Có lỗi xảy ra');
+      const res = await fetch(`/api/notifications/${recipientId}/read`, {
+        method: 'POST'
+      });
+
+      if (!res.ok) throw new Error('Failed to mark as read');
+
+      // Update local state
+      setNotifications(notifications.map(n =>
+        n.recipient_id === recipientId
+          ? { ...n, is_read: true, read_at: new Date().toISOString() }
+          : n
+      ));
+      setUnreadCount(Math.max(0, unreadCount - 1));
+    } catch (error) {
+      console.error('Mark as read error:', error);
     }
   };
 
-  const handleNotificationClick = (notif: Notification) => {
-    if (notif.url) {
-      router.push(notif.url);
-    }
-    const notificationId = notif.notification_id || notif.id;
-    if (!notif.read && notificationId) {
-      handleMarkAsRead(notificationId);
-    }
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="w-5 h-5 text-primary-600" />;
-      case 'warning':
-        return <AlertCircle className="w-5 h-5 text-orange-600" />;
-      case 'reminder':
-        return <Clock className="w-5 h-5 text-blue-600" />;
-      default:
-        return <Bell className="w-5 h-5 text-primary-600" />;
-    }
-  };
-
-  const getBgColor = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'bg-primary-50 border-primary-200';
-      case 'warning':
-        return 'bg-orange-50 border-orange-200';
-      case 'reminder':
-        return 'bg-blue-50 border-blue-200';
-      default:
-        return 'bg-white border-dark-200';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
-      </div>
-    );
-  }
+  const displayNotifications = notifications.filter(n =>
+    filter === 'all' ? true : !n.is_read
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-dark-800">
-            Thông báo {unreadCount > 0 && `(${unreadCount})`}
-          </h1>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-4">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="text-primary-600">Đang tải...</div>
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary-500 to-primary-600 flex items-center justify-center relative">
+              <Bell className="w-6 h-6 text-white" />
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </div>
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-dark-900">Thông báo</h1>
+              <p className="text-dark-600">
+                {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Không có thông báo mới'}
+              </p>
+            </div>
           </div>
-        ) : notifications.length === 0 ? (
+
+          {/* Filter */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === 'all'
+                ? 'bg-primary-500 text-white'
+                : 'bg-white text-dark-700 border border-dark-200'
+                }`}
+            >
+              Tất cả
+            </button>
+            <button
+              onClick={() => setFilter('unread')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === 'unread'
+                ? 'bg-primary-500 text-white'
+                : 'bg-white text-dark-700 border border-dark-200'
+                }`}
+            >
+              Chưa đọc
+            </button>
+          </div>
+        </div>
+
+        {/* Notifications List */}
+        {loading ? (
+          <div className="text-center py-12 text-dark-600">Đang tải...</div>
+        ) : displayNotifications.length === 0 ? (
           <div className="text-center py-12">
-            <Bell className="w-16 h-16 text-dark-300 mx-auto mb-4" />
-            <p className="text-dark-500 mb-4">Chưa có thông báo nào</p>
+            <Bell className="w-16 h-16 text-dark-300 mx-auto mb-3" />
+            <p className="text-dark-600">
+              {filter === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
+            </p>
           </div>
         ) : (
-          notifications.map((notif, index) => {
-            const notificationId = (notif as any).notification_id || (notif as any).id || '';
-            const timestamp = typeof notif.timestamp === 'string'
-              ? new Date(notif.timestamp)
-              : notif.timestamp;
-
-            return (
-              <motion.div
-                key={notificationId}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => handleNotificationClick({ ...notif, id: notificationId, timestamp })}
-                className={`bg-white rounded-2xl p-5 shadow-xl border-2 cursor-pointer hover:shadow-2xl transition ${getBgColor(notif.type)} ${!notif.read ? 'ring-2 ring-primary-500' : ''
-                  }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
-                    {getIcon(notif.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-dark-800 mb-1">{notif.title}</h3>
-                        <p className="text-sm text-dark-600 mb-2">{notif.message}</p>
-                        <p className="text-xs text-dark-400">
-                          {timestamp.toLocaleString('vi-VN', {
-                            day: 'numeric',
-                            month: 'long',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        {!notif.read && (
-                          <button
-                            onClick={() => handleMarkAsRead(notificationId)}
-                            className="text-xs text-primary-600 font-semibold hover:underline"
-                          >
-                            Đánh dấu đã đọc
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(notificationId)}
-                          className="w-8 h-8 hover:bg-red-50 rounded-lg flex items-center justify-center transition"
-                        >
-                          <X className="w-4 h-4 text-dark-400" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })
+          <div className="space-y-4">
+            {displayNotifications.map((notif) => (
+              <NotificationCard
+                key={notif.recipient_id}
+                notification={notif}
+                onMarkAsRead={handleMarkAsRead}
+              />
+            ))}
+          </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
 
+function NotificationCard({
+  notification,
+  onMarkAsRead
+}: {
+  notification: Notification;
+  onMarkAsRead: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'promotion':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'event':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'maintenance':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
+      default:
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
+  };
+
+  return (
+    <div
+      className={`bg-white rounded-lg shadow-soft border transition-all cursor-pointer ${notification.is_read ? 'border-dark-200' : 'border-primary-300 bg-primary-50/30'
+        }`}
+      onClick={() => {
+        setExpanded(!expanded);
+        if (!notification.is_read) {
+          onMarkAsRead(notification.recipient_id);
+        }
+      }}
+    >
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Icon/Emoji */}
+          <div className="flex-shrink-0">
+            {notification.emoji ? (
+              <div className="text-3xl">{notification.emoji}</div>
+            ) : notification.is_read ? (
+              <Bell className="w-6 h-6 text-dark-400" />
+            ) : (
+              <BellDot className="w-6 h-6 text-primary-500" />
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="font-semibold text-dark-900">{notification.title}</h3>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getTypeColor(notification.type)}`}>
+                {notification.type}
+              </span>
+            </div>
+
+            {/* Preview or Full Content */}
+            {expanded ? (
+              notification.content_html ? (
+                <div
+                  className="prose prose-sm max-w-none mt-2"
+                  dangerouslySetInnerHTML={{ __html: notification.content_html }}
+                />
+              ) : (
+                <p className="text-sm text-dark-700 mt-2 whitespace-pre-wrap">{notification.message}</p>
+              )
+            ) : (
+              <p className="text-sm text-dark-600 line-clamp-2">
+                {notification.content_html
+                  ? notification.content_html.replace(/<[^>]*>/g, '').substring(0, 100) + '...'
+                  : notification.message}
+              </p>
+            )}
+
+            {/* Image */}
+            {expanded && notification.image_url && (
+              <img
+                src={notification.image_url}
+                alt={notification.title}
+                className="mt-3 rounded-lg max-w-full h-auto"
+              />
+            )}
+
+            {/* Action Button */}
+            {expanded && notification.action_url && (
+              <a
+                href={notification.action_url}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-block mt-3 px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600"
+              >
+                Xem chi tiết →
+              </a>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center gap-3 mt-2 text-xs text-dark-500">
+              <span>{new Date(notification.created_at).toLocaleString('vi-VN')}</span>
+              {notification.is_read && (
+                <>
+                  <span>•</span>
+                  <CheckCircle className="w-3.5 h-3.5 inline" />
+                  <span>Đã đọc</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

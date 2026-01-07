@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllUsers } from '@/lib/supabase/users';
-import { verifyAdminFromRequest } from '@/lib/supabase/admin-auth';
+import { checkAdminApi } from '@/lib/supabase/admin';
 
 /**
  * API để lấy danh sách tất cả users (chỉ admin)
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin using env credentials
-    if (!verifyAdminFromRequest(request)) {
+    // Verify admin using env credentials or session
+    const isAdmin = await checkAdminApi(request);
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized - Admin credentials required' },
         { status: 401 }
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       total: users.length,
     });
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
+    const err = error as Error; return NextResponse.json(
       {
         success: false,
         error: err.message || 'Internal server error',

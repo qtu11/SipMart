@@ -5,11 +5,14 @@ import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getCurrentUser, onAuthChange } from '@/lib/supabase/auth';
+import { authFetch } from '@/lib/supabase/authFetch';
 import { UserProfile } from '@/lib/types/api';
 import { logger } from '@/lib/logger';
 import ChatAI from '@/components/ChatAI';
 import Scene3D from '@/components/Scene3D';
 import ProfileMenu from '@/components/ProfileMenu';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import FallingLeaves from '@/components/FallingLeaves';
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -28,11 +31,14 @@ export default function Home() {
       setLoading(false);
 
       if (currentUser) {
-        // Fetch user stats
-        fetch(`/api/wallet?userId=${(currentUser as UserProfile).id || (currentUser as UserProfile).user_id}`)
-          .then(res => res.json())
+        // Fetch user stats with Auth Header
+        authFetch('/api/wallet')
+          .then(res => {
+            if (res.status === 401) return null; // Handle unauthorized gracefully
+            return res.json();
+          })
           .then(data => {
-            if (data.walletBalance !== undefined) {
+            if (data && data.walletBalance !== undefined) {
               setStats({
                 totalCupsSaved: data.totalCupsSaved || 0,
                 totalPlasticReduced: data.totalPlasticReduced || 0,
@@ -59,7 +65,8 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
-        <div className="text-primary-600">Đang tải...</div>
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

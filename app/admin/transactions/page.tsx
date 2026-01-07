@@ -34,6 +34,7 @@ export default function TransactionsManagementPage() {
             const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
+            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
 
             const query = new URLSearchParams({
                 page: pagination.page.toString(),
@@ -45,6 +46,7 @@ export default function TransactionsManagementPage() {
                 headers: {
                     'x-admin-email': email,
                     'x-admin-password': adminPassword,
+                    'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
                 },
             });
 
@@ -87,6 +89,7 @@ export default function TransactionsManagementPage() {
             const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
             const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
             const email = adminKey.split(',')[0].trim();
+            const { data: { session } } = await import('@/lib/supabase/client').then(m => m.supabase.auth.getSession());
 
             const res = await fetch('/api/admin/transactions', {
                 method: 'PATCH',
@@ -94,6 +97,7 @@ export default function TransactionsManagementPage() {
                     'Content-Type': 'application/json',
                     'x-admin-email': email,
                     'x-admin-password': adminPassword,
+                    'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
                 },
                 body: JSON.stringify({ transactionId, status: newStatus, forceComplete: true })
             });

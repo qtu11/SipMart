@@ -102,3 +102,97 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+
+export async function PATCH(req: NextRequest) {
+    // Skip during build time if environment is not configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
+    }
+
+    try {
+        const auth = await checkAdminApi(req);
+        if (!auth) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { storeId, name, address, gpsLat, gpsLng, partnerStatus } = body;
+
+        if (!storeId) {
+            return NextResponse.json({ error: 'Missing storeId' }, { status: 400 });
+        }
+
+        const updates: any = {};
+        if (name !== undefined) updates.name = name;
+        if (address !== undefined) updates.address = address;
+        if (gpsLat !== undefined) updates.gps_lat = gpsLat;
+        if (gpsLng !== undefined) updates.gps_lng = gpsLng;
+        if (partnerStatus !== undefined) updates.partner_status = partnerStatus;
+
+        const { data: store, error } = await getSupabaseAdmin()
+            .from('stores')
+            .update(updates)
+            .eq('store_id', storeId)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        const formattedStore = {
+            storeId: store.store_id,
+            name: store.name,
+            address: store.address,
+            gpsLat: store.gps_lat,
+            gpsLng: store.gps_lng,
+            partnerStatus: store.partner_status,
+            cupAvailable: store.cup_available,
+            cupInUse: store.cup_in_use,
+            cupCleaning: store.cup_cleaning,
+            cupTotal: store.cup_total,
+            createdAt: store.created_at,
+        };
+
+        return NextResponse.json({ success: true, store: formattedStore });
+    } catch (error) {
+        console.error('Info: Failed to update store', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    // Skip during build time if environment is not configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
+    }
+
+    try {
+        const auth = await checkAdminApi(req);
+        if (!auth) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const storeId = searchParams.get('storeId');
+
+        if (!storeId) {
+            return NextResponse.json({ error: 'Missing storeId' }, { status: 400 });
+        }
+
+        // Soft delete by setting partner_status to 'inactive'
+        const { error } = await getSupabaseAdmin()
+            .from('stores')
+            .update({ partner_status: 'inactive' })
+            .eq('store_id', storeId);
+
+        if (error) throw error;
+
+        return NextResponse.json({
+            success: true,
+            message: 'Store deactivated successfully',
+        });
+    } catch (error) {
+        console.error('Info: Failed to delete store', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
+
