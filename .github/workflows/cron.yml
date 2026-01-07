@@ -1,0 +1,43 @@
+name: Cron Jobs (GitHub Actions)
+
+on:
+  schedule:
+    # Runs every 15 minutes for overdue check and reminders
+    - cron: '*/15 * * * *'
+    # Runs every hour for rankings
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  APP_URL: https://cupsipmart-edu-uef.vercel.app
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+jobs:
+  cron-15min:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Check Overdue Transactions
+        run: |
+          curl -X POST "${{ env.APP_URL }}/api/cron/check-overdue" \
+            -H "Authorization: Bearer ${{ env.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
+
+      - name: Send Due Reminders
+        run: |
+          curl -X POST "${{ env.APP_URL }}/api/cron/due-reminders" \
+            -H "Authorization: Bearer ${{ env.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
+
+  cron-hourly:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 * * * *'
+    steps:
+      - name: Refresh Rankings
+        run: |
+          curl -X POST "${{ env.APP_URL }}/api/cron/refresh-rankings" \
+            -H "Authorization: Bearer ${{ env.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error

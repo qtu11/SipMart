@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
               <p>Bạn vừa giúp giảm <strong>1 ly nhựa</strong> - tương đương bớt đi <strong>450 năm ô nhiễm</strong>! Cảm ơn bạn đã góp phần bảo vệ hành tinh! 🌍</p>
               
               <p style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/scan" class="button">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-edu-uef.vercel.app'}/scan" class="button">
                   Quét QR để trả ly
                 </a>
               </p>
@@ -110,7 +110,7 @@ Thông tin giao dịch:
 🌟 Tác động môi trường:
 Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!
 
-Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/scan để trả ly
+Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-edu-uef.vercel.app'}/scan để trả ly
 
 Chúc bạn có trải nghiệm tuyệt vời với CupSipMart!
 
@@ -120,7 +120,7 @@ CupSipMart - Mượn ly, Cứu hành tinh
 
     // Gửi email qua Resend service
     const result = await sendEmail(emailContent);
-    
+
     if (!result.success) {
       return NextResponse.json(
         {
@@ -136,7 +136,7 @@ CupSipMart - Mượn ly, Cứu hành tinh
       message: 'Borrow notification email sent successfully',
     });
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
+    const err = error as Error; return NextResponse.json(
       {
         success: false,
         error: err.message || 'Failed to send email',
