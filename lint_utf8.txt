@@ -1,0 +1,127 @@
+﻿
+> cupsipsmart@1.0.0 lint
+> next lint
+
+node.exe : 
+At line:1 char:1
++ & "C:\Program Files\
+nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (:String) [   
+ ], RemoteExceptio    
+n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+./app/admin/settings/p
+age.tsx
+40:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'checkAuth'. Either 
+include it or remove 
+the dependency array. 
+ react-hooks/exhaustiv
+e-deps
+
+./app/api/cron/check-o
+verdue/route.ts
+14:64  Error: Parsing 
+error: Expression 
+expected.
+
+./app/rewards/page.tsx
+31:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'checkAuth'. Either 
+include it or remove 
+the dependency array. 
+ react-hooks/exhaustiv
+e-deps
+37:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'fetchUserClaims'. 
+Either include it or 
+remove the dependency 
+array.  react-hooks/ex
+haustive-deps
+
+./components/admin/Aud
+itLogViewer.tsx
+101:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'fetchLogs'. Either 
+include it or remove 
+the dependency array. 
+ react-hooks/exhaustiv
+e-deps
+
+./components/ProfileMe
+nu.tsx
+29:6  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'fetchUserStats'. 
+Either include it or 
+remove the dependency 
+array.  react-hooks/ex
+haustive-deps
+
+./components/RewardsSt
+ore.tsx
+35:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'fetchRewards'. 
+Either include it or 
+remove the dependency 
+array.  react-hooks/ex
+haustive-deps
+
+./lib/firebase/analyti
+cs.ts
+295:9  Warning: 'q' 
+is never reassigned. 
+Use 'const' instead.  
+prefer-const
+
+./lib/firebase/cups.ts
+42:7  Warning: 'cup' 
+is never reassigned. 
+Use 'const' instead.  
+prefer-const
+
+./lib/firebase/payment
+s.ts
+167:9  Warning: 'q' 
+is never reassigned. 
+Use 'const' instead.  
+prefer-const
+
+./lib/supabase/streaks
+.ts
+41:9  Warning: 
+'streak' is never 
+reassigned. Use 
+'const' instead.  
+prefer-const
+
+info  - Need to 
+disable some ESLint 
+rules? Learn more 
+here: https://nextjs.o
+rg/docs/basic-features
+/eslint#disabling-rule
+s

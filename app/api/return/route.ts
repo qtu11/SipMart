@@ -7,6 +7,9 @@ import { verifyAuth } from '@/lib/middleware/auth';
 import { returnSchema, validateRequest } from '@/lib/validation/schemas';
 import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
 
+// Rate limiter
+import { checkRateLimit } from '@/lib/rate-limit';
+
 export async function POST(request: NextRequest) {
   try {
     // SECURITY: Verify user authentication first
@@ -18,6 +21,17 @@ export async function POST(request: NextRequest) {
 
     // Use authenticated userId only (not from request body)
     const userId = authResult.userId;
+
+    // Rate Limit Check
+    const rateLimitResult = checkRateLimit(`return:${userId}`, {
+      windowMs: 60 * 1000,
+      maxRequests: 10
+    });
+
+    if (!rateLimitResult.success) {
+      return errorResponse('Too Many Requests', 429);
+    }
+
     const body = await request.json();
 
     // Input validation using Zod

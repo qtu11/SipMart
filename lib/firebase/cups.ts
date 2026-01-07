@@ -39,7 +39,7 @@ export async function createCup(
 // Tìm cup theo ID (hỗ trợ cả 8-digit ID và UUID cũ)
 export async function findCupById(cupId: string): Promise<Cup | null> {
   // Thử tìm trực tiếp với cupId
-  let cup = await getCup(cupId);
+  const cup = await getCup(cupId);
   if (cup) return cup;
 
   // Nếu không tìm thấy, có thể là format cũ (UUID)

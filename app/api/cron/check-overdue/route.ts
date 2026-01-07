@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger';
  * Vercel cron.json example:
  * {
  *   "crons": [
- *     { "path": "/api/cron/check-overdue", "schedule": "*/15 * * * * " }
+ *     { "path": "/api/cron/check-overdue", "schedule": "*\\/15 * * * *" }
     *   ]
  * }
  */

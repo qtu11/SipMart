@@ -1,48 +1,65 @@
-// API: Claim Reward
-import { NextResponse } from 'next/server';
-import { claimReward, getUserRewardClaims } from '@/lib/firebase/rewards';
+// API: Claim Reward - MIGRATED TO SUPABASE with authentication
+import { NextRequest, NextResponse } from 'next/server';
+import { claimReward, getUserRewardClaimsWithDetails } from '@/lib/supabase/rewards';
+import { verifyAuth } from '@/lib/middleware/auth';
+import { logger } from '@/lib/logger';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, rewardId } = body;
-
-    if (!userId || !rewardId) {
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { rewardId } = body;
+
+    if (!rewardId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing rewardId' },
         { status: 400 }
       );
     }
 
-    const result = await claimReward(userId, rewardId);
-    return NextResponse.json(result);
+    // Use authenticated userId (security: don't trust client userId)
+    const claim = await claimReward(authResult.userId, rewardId);
+
+    logger.info('Reward claimed', { userId: authResult.userId, rewardId });
+
+    return NextResponse.json({ success: true, claim });
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
+    const err = error as Error;
+    logger.error('Claim reward error', { error: err.message });
+    return NextResponse.json(
       { success: false, error: err.message },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    const claims = await getUserRewardClaims(userId);
+    const claims = await getUserRewardClaimsWithDetails(authResult.userId);
     return NextResponse.json({ success: true, claims });
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
+    const err = error as Error;
+    logger.error('Get reward claims error', { error: err.message });
+    return NextResponse.json(
       { success: false, error: err.message },
       { status: 500 }
     );
   }
 }
-

@@ -1,9 +1,11 @@
 // VNPay Return Page - User lands here after payment
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 interface PaymentResult {
     status: 'success' | 'failed' | 'pending';
@@ -29,7 +31,18 @@ const RESPONSE_MESSAGES: Record<string, string> = {
     '99': 'Lỗi không xác định.',
 };
 
-export default function VNPayReturnPage() {
+function LoadingSpinner() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Đang xử lý kết quả thanh toán...</p>
+            </div>
+        </div>
+    );
+}
+
+function PaymentReturnContent() {
     const searchParams = useSearchParams();
     const [result, setResult] = useState<PaymentResult | null>(null);
     const [loading, setLoading] = useState(true);
@@ -63,14 +76,7 @@ export default function VNPayReturnPage() {
     }, [searchParams]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Đang xử lý kết quả thanh toán...</p>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     return (
@@ -135,5 +141,13 @@ export default function VNPayReturnPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VNPayReturnPage() {
+    return (
+        <Suspense fallback={<LoadingSpinner />}>
+            <PaymentReturnContent />
+        </Suspense>
     );
 }

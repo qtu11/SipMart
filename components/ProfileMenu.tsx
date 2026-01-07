@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store, Sparkles } from 'lucide-react';
+import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store, Sparkles, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { signOutUser } from '@/lib/supabase/auth';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { isAdminEmail } from '@/lib/supabase/admin';
 
 interface ProfileMenuProps {
   user: any;
@@ -15,11 +16,15 @@ interface ProfileMenuProps {
 export default function ProfileMenu({ user }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [userStats, setUserStats] = useState<{ points: number; tier: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (user?.id) {
       fetchUserStats();
+      // Check if user is admin
+      const adminStatus = isAdminEmail(user?.email || '');
+      setIsAdmin(adminStatus);
     }
   }, [user]);
 
@@ -136,6 +141,17 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
                   <HelpCircle className="w-5 h-5 text-dark-500" />
                   <span className="text-dark-700">Trợ giúp</span>
                 </Link>
+
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-yellow-50 transition bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500"
+                  >
+                    <Shield className="w-5 h-5 text-yellow-600" />
+                    <span className="text-yellow-700 font-semibold">Trang Quản Trị</span>
+                  </Link>
+                )}
 
                 <Link
                   href="/partner/register"

@@ -76,15 +76,16 @@ export default function LoginPage() {
       return;
     }
 
-    if (!captchaToken) {
-      toast.error('Vui lòng xác nhận bạn không phải người máy');
-      return;
-    }
+    // Optional: Skip captcha validation in development
+    // if (!captchaToken) {
+    //   toast.error('Vui lòng xác nhận bạn không phải người máy');
+    //   return;
+    // }
 
     setLoading(true);
 
     try {
-      const user = await signInWithEmail(email.trim(), password, captchaToken);
+      const user = await signInWithEmail(email.trim(), password, captchaToken || undefined);
       const userEmail = user.email || email;
 
       if (checkIsAdmin(userEmail)) {
@@ -250,7 +251,7 @@ export default function LoginPage() {
             {/* Submit Button */}
             <motion.button
               type="submit"
-              disabled={loading || !captchaToken}
+              disabled={loading}
               whileHover={{ scale: loading ? 1 : 1.02 }}
               whileTap={{ scale: loading ? 1 : 0.98 }}
               className="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

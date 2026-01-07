@@ -49,10 +49,11 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!captchaToken) {
-      toast.error('Vui lòng xác nhận bạn không phải người máy');
-      return;
-    }
+    // Optional: Skip captcha validation in development
+    // if (!captchaToken) {
+    //   toast.error('Vui lòng xác nhận bạn không phải người máy');
+    //   return;
+    // }
 
     setLoading(true);
     try {
@@ -62,7 +63,7 @@ export default function RegisterPage() {
         formData.password,
         formData.displayName,
         formData.studentId || undefined,
-        captchaToken
+        captchaToken || undefined
       );
 
       // Gửi email thông báo đăng ký

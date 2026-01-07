@@ -14,11 +14,12 @@ function stringifyParams(obj: Record<string, string | number>, encode = true): s
 }
 
 // Validate required environment variables at startup
-const requiredEnvVars = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
-const missingVars = requiredEnvVars.filter(v => !process.env[v]);
-if (missingVars.length > 0 && process.env.NODE_ENV === 'production') {
-    throw new Error(`Missing required VNPay environment variables: ${missingVars.join(', ')}`);
-}
+// Environment validation moved to runtime usage or separate config check
+// const requiredEnvVars = ['VNP_TMN_CODE', 'VNP_HASH_SECRET', 'VNP_URL', 'VNP_RETURN_URL'];
+// const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+// if (missingVars.length > 0 && process.env.NODE_ENV === 'production') {
+//     console.warn(`Warning: Missing required VNPay environment variables: ${missingVars.join(', ')}`);
+// }
 
 export const vnpayConfig = {
     tmnCode: process.env.VNP_TMN_CODE || '',

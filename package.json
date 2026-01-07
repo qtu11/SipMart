@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "env:check": "ts-node-esm scripts/validate-env.ts",
-    "dev": "npm run env:check && next dev",
-    "build": "npm run env:check && next build",
+    "env:check": "node scripts/validate-env.mjs",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",

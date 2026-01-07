@@ -14,6 +14,10 @@ import { logger } from '@/lib/logger';
 const DEPOSIT_AMOUNT = parseInt(process.env.NEXT_PUBLIC_DEPOSIT_AMOUNT || '20000');
 const BORROW_DURATION_HOURS = parseInt(process.env.NEXT_PUBLIC_BORROW_DURATION_HOURS || '24');
 
+// Rate limiter: 10 requests per minute per user
+// Rate limiter
+import { checkRateLimit } from '@/lib/rate-limit';
+
 export async function POST(request: NextRequest) {
   try {
     // SECURITY: Verify user authentication first
@@ -25,6 +29,17 @@ export async function POST(request: NextRequest) {
 
     // Use authenticated userId only (not from request body)
     const userId = authResult.userId;
+
+    // Rate Limit Check
+    const rateLimitResult = checkRateLimit(`borrow:${userId}`, {
+      windowMs: 60 * 1000,
+      maxRequests: 10
+    });
+
+    if (!rateLimitResult.success) {
+      return errorResponse('Too Many Requests', 429);
+    }
+
     const body = await request.json();
 
     // Input validation using Zod
@@ -118,12 +133,51 @@ export async function POST(request: NextRequest) {
       throw new Error(borrowResult.message);
     }
 
+
     // Cập nhật inventory
     await borrowCupFromStore(storeId);
 
     // ============= GAMIFICATION: Award Green Points =============
     const borrowPoints = GAMIFICATION_CONFIG.points.borrow;
     await addGreenPoints(userId, borrowPoints, `Borrowed cup ${cupId}`);
+
+    // ============= GAMIFICATION: Update Streak =============
+    try {
+      const { updateUserStreak } = await import('@/lib/supabase/streaks');
+      const streakResult = await updateUserStreak(userId);
+      if (streakResult.streakBonusPoints > 0) {
+        logger.info('Streak bonus awarded', {
+          userId,
+          streak: streakResult.currentStreak,
+          bonus: streakResult.streakBonusPoints,
+        });
+      }
+    } catch (streakError) {
+      logger.error('Failed to update streak', { userId, error: streakError });
+    }
+
+    // ============= GAMIFICATION: Update Challenge Progress =============
+    try {
+      const { updateChallengeProgress } = await import('@/lib/supabase/challenges');
+      await updateChallengeProgress(userId, 'cups', 1);
+    } catch (challengeError) {
+      logger.error('Failed to update challenge progress', { userId, error: challengeError });
+    }
+
+    // ============= AUDIT LOG =============
+    try {
+      const { createAuditLog } = await import('@/lib/supabase/audit-logs');
+      await createAuditLog({
+        actorId: userId,
+        actorType: 'user',
+        action: 'cup_borrow',
+        resourceType: 'cups',
+        resourceId: cupId,
+        newValue: { cupId, storeId, depositAmount: DEPOSIT_AMOUNT },
+      });
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { userId, error: auditError });
+    }
 
     // ============= GAMIFICATION: Create EcoAction record =============
     await getSupabaseAdmin()
@@ -146,6 +200,7 @@ export async function POST(request: NextRequest) {
         message: `Bạn vừa mượn ly tại ${store.name}. Nhận ${borrowPoints} Green Points! Nhớ trả đúng hạn nhé.`,
         url: '/profile',
       });
+
 
     // Gửi email thông báo mượn ly (async, không block response)
     if (user.email) {
