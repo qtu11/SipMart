@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -17,23 +17,7 @@ export default function MessageListPanel({ currentUserId, onClose, onChatSelect 
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        fetchConversations();
-
-        // Realtime subscription for new messages
-        const channel = supabase
-            .channel('conversations')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-                fetchConversations();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [currentUserId]);
-
-    const fetchConversations = async () => {
+    const fetchConversations = useCallback(async () => {
         try {
             // This is simplified - in production you'd have a proper conversation list RPC
             const { data: users, error } = await supabase
@@ -59,7 +43,25 @@ export default function MessageListPanel({ currentUserId, onClose, onChatSelect 
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentUserId]);
+
+    useEffect(() => {
+        fetchConversations();
+
+        // Realtime subscription for new messages
+        const channel = supabase
+            .channel('conversations')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+                fetchConversations();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUserId, fetchConversations]);
+
+
 
     const filteredConversations = conversations.filter((c) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase())

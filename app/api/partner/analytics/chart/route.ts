@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
         const storeIdField = type === 'returns' ? 'return_store_id' : 'borrow_store_id';
         const dateField = type === 'returns' ? 'return_time' : 'borrow_time';
 
-        let query = supabase
+        const query = supabase
             .from('transactions')
             .select(`${dateField}, deposit_amount`)
             .in(storeIdField, storeIds)

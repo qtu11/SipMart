@@ -325,6 +325,7 @@ export default function Feed({ user }: { user: any }) {
                         )}
                         {image && (
                             <div className="relative w-full max-h-60 overflow-hidden rounded-lg mb-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={image} className="w-full h-full object-cover" alt="Preview" />
                                 <button onClick={() => setImage(null)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70">×</button>
                             </div>

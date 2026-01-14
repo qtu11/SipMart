@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { getAllStores, getActiveStores, findNearbyStores } from '@/lib/supabase/stores';
 import { jsonResponse, errorResponse } from '@/lib/api-utils';

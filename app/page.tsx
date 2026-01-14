@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ import FallingLeaves from '@/components/FallingLeaves';
 import SocialLayout from '@/components/social/SocialLayout';
 import Feed from '@/components/social/Feed';
 
-export default function Home() {
+function HomeContent() {
   const [stats, setStats] = useState({
     totalCupsSaved: 0,
     totalPlasticReduced: 0,
@@ -307,5 +307,18 @@ export default function Home() {
       {/* Chat AI */}
       <ChatAI />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
+        <FallingLeaves />
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
         // Calculate date range
         const now = new Date();
         let queryStartDate: Date;
-        let queryEndDate = endDate ? new Date(endDate) : now;
+        const queryEndDate = endDate ? new Date(endDate) : now;
 
         if (startDate) {
             queryStartDate = new Date(startDate);

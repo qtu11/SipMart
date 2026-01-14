@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
             .select('resource_saved_type, resource_saved_amount')
             .eq('user_id', userId);
 
-        let waterSaved = 0; // Liters
+        const waterSaved = 0; // Liters
         let paperSaved = 0; // Sheets
 
         deviceLogs?.forEach(log => {

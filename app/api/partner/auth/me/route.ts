@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { jsonResponse, errorResponse, unauthorizedResponse } from '@/lib/api-utils';

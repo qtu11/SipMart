@@ -39,7 +39,7 @@ export default function CallPage() {
                 stream.getTracks().forEach(track => track.stop());
             }
         };
-    }, [router]);
+    }, [router, stream]);
 
     const startCamera = async () => {
         try {

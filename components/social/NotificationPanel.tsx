@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Bell, MessageCircle, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -16,23 +16,7 @@ export default function NotificationPanel({ userId, onClose }: NotificationPanel
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchNotifications();
-
-        // Realtime subscription
-        const channel = supabase
-            .channel('notifications')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => {
-                fetchNotifications();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [userId]);
-
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             const { data, error } = await supabase
                 .from('notifications')
@@ -48,7 +32,25 @@ export default function NotificationPanel({ userId, onClose }: NotificationPanel
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        fetchNotifications();
+
+        // Realtime subscription
+        const channel = supabase
+            .channel('notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => {
+                fetchNotifications();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [userId, fetchNotifications]);
+
+
 
     const markAsRead = async (notificationId: string) => {
         try {

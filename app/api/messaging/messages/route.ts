@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Kiểm tra user có phải participant không
-        let { data: participant } = await supabase
+        const { data: participant } = await supabase
             .from('conversation_participants')
             .select('id')
             .eq('conversation_id', conversationId)

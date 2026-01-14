@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -28,7 +28,7 @@ interface Conversation {
     unreadCount?: number;
 }
 
-export default function MessagesPage() {
+function MessagesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const conversationIdParam = searchParams?.get('conversationId');
@@ -319,5 +319,20 @@ export default function MessagesPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <div className="text-primary-600">Đang tải...</div>
+                </div>
+            </div>
+        }>
+            <MessagesContent />
+        </Suspense>
     );
 }
