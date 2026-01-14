@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Search, UserPlus, Check, X, Users, UserCheck, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Search, UserPlus, Check, X, Users, UserCheck, ArrowLeft, GraduationCap, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/supabase/auth';
 import toast from 'react-hot-toast';
 import { logger } from '@/lib/logger';
+import SocialLayout from '@/components/social/SocialLayout';
 
 interface Friend {
   userId: string;
@@ -34,6 +35,7 @@ export default function FriendsPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [presence, setPresence] = useState<Record<string, 'online' | 'offline'>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -91,12 +93,73 @@ export default function FriendsPage() {
     }
   }, [userId]);
 
+  const fetchFriendsPresence = useCallback(async () => {
+    if (friends.length === 0) return;
+
+    const friendIds = friends.map(f => f.userId).join(',');
+    try {
+      const res = await fetch(`/api/messaging/presence?userIds=${friendIds}`);
+      const data = await res.json();
+
+      if (data.success) {
+        const presenceMap: Record<string, 'online' | 'offline'> = {};
+        data.presence.forEach((p: any) => {
+          presenceMap[p.user_id] = p.status;
+        });
+        setPresence(presenceMap);
+      }
+    } catch (error) {
+      console.error('Error fetching presence:', error);
+    }
+  }, [friends]);
+
   useEffect(() => {
     if (userId) {
       loadFriendRequests();
       loadFriends();
+
+      // Update own presence to online (only if authenticated)
+      fetch('/api/messaging/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'online' }),
+      }).catch(console.error); // Silent fail if not authenticated
+
+      // Fetch friends presence every 10 seconds
+      const presenceInterval = setInterval(() => {
+        fetchFriendsPresence();
+      }, 10000);
+
+      // Initial fetch
+      fetchFriendsPresence();
+
+      return () => clearInterval(presenceInterval);
     }
-  }, [userId, loadFriendRequests, loadFriends]);
+  }, [userId, loadFriendRequests, loadFriends, fetchFriendsPresence]);
+
+  const handleOpenChat = async (friendId: string) => {
+    if (!userId) return;
+
+    try {
+      // Create or get conversation
+      const res = await fetch('/api/messaging/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otherUserId: friendId }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Redirect to messages page or open chat window
+        router.push(`/messages?conversationId=${data.conversationId}`);
+      } else {
+        toast.error('Không thể mở chat');
+      }
+    } catch (error) {
+      toast.error('Lỗi khi mở chat');
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchStudentId.trim()) {
@@ -194,24 +257,8 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-soft sticky top-0 z-40 border-b border-primary-100">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-primary-600 hover:text-primary-700 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Về trang chủ</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-primary-600" />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-              Bạn bè
-            </h1>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <SocialLayout user={{ id: userId }}>
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Tabs */}
         <div className="flex gap-4 mb-6 bg-white rounded-2xl p-2 shadow-soft">
           <button
@@ -357,24 +404,49 @@ export default function FriendsPage() {
                 <p className="text-sm text-dark-500 mt-2">Tìm kiếm bằng mã sinh viên để kết bạn!</p>
               </div>
             ) : (
-              friends.map((friend) => (
-                <div key={friend.userId} className="bg-white rounded-2xl shadow-soft p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">
-                      {friend.displayName?.[0]?.toUpperCase() || friend.email[0]?.toUpperCase()}
+              friends
+                .sort((a, b) => {
+                  // Sort: online first, then offline
+                  const aStatus = presence[a.userId] || 'offline';
+                  const bStatus = presence[b.userId] || 'offline';
+                  if (aStatus === 'online' && bStatus !== 'online') return -1;
+                  if (aStatus !== 'online' && bStatus === 'online') return 1;
+                  return 0;
+                })
+                .map((friend) => {
+                  const isOnline = presence[friend.userId] === 'online';
+                  return (
+                    <div key={friend.userId} className="bg-white rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-lg transition-shadow">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className="w-12 h-12 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {friend.displayName?.[0]?.toUpperCase() || friend.email[0]?.toUpperCase()}
+                          </div>
+                          {isOnline && (
+                            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-dark-900">{friend.displayName || friend.email}</h3>
+                          <p className="text-sm text-dark-600">{friend.email}</p>
+                          {isOnline && <span className="text-xs text-green-500">● Đang hoạt động</span>}
+                          {!isOnline && <span className="text-xs text-gray-400">○ Ngoại tuyến</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleOpenChat(friend.userId)}
+                        className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition text-sm font-semibold"
+                      >
+                        Nhắn tin
+                      </button>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-dark-900">{friend.displayName || friend.email}</h3>
-                      <p className="text-sm text-dark-600">{friend.email}</p>
-                    </div>
-                  </div>
-                </div>
-              ))
+                  );
+                })
             )}
           </motion.div>
         )}
-      </main>
-    </div>
+      </div>
+    </SocialLayout>
   );
 }
 

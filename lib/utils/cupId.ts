@@ -70,19 +70,19 @@ export async function generateUniqueCupId(): Promise<string> {
 
 /**
  * Parse QR code data
- * Format: "CUP|{cupId}|{material}|CupSipSmart"
+ * Format: "CUP|{cupId}|{material}|SipSmart"
  * Hoặc format cũ: URL với cup_id param
  */
 export function parseQRCodeData(qrData: string): { cupId: string; material?: string } | null {
   try {
-    // Format mới: "CUP|12345678|pp_plastic|CupSipSmart"
+    // Format mới: "CUP|12345678|pp_plastic|SipSmart"
     if (qrData.startsWith('CUP|')) {
       const parts = qrData.split('|');
-      if (parts.length >= 4 && parts[3] === 'CupSipSmart') {
+      if (parts.length >= 4 && parts[3] === 'SipSmart') {
         const cupId = parts[1];
         const material = parts[2];
-        // Validate cupId là 8 số
-        if (/^\d{8}$/.test(cupId)) {
+        // Validate cupId là 8 số hoặc UUID
+        if (/^(\d{8}|[0-9a-fA-F-]{36})$/.test(cupId)) {
           return { cupId, material: material as 'pp_plastic' | 'bamboo_fiber' };
         }
       }
@@ -97,8 +97,9 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
       }
     }
 
-    // Format đơn giản: chỉ có cup ID (8 số) - backward compatibility
-    if (/^\d{8}$/.test(qrData.trim())) {
+    // Format đơn giản: chỉ có cup ID (8 số hoặc UUID)
+    const idPattern = /^(\d{8}|[0-9a-fA-F-]{36})$/;
+    if (idPattern.test(qrData.trim())) {
       return { cupId: qrData.trim() };
     }
 
@@ -110,10 +111,10 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
 
 /**
  * Tạo QR code data string
- * Format: "CUP|{cupId}|{material}|CupSipSmart"
+ * Format: "CUP|{cupId}|{material}|SipSmart"
  */
 export function generateQRCodeData(cupId: string, material: 'pp_plastic' | 'bamboo_fiber'): string {
-  return `CUP|${cupId}|${material}|CupSipSmart`;
+  return `CUP|${cupId}|${material}|SipSmart`;
 }
 
 /**

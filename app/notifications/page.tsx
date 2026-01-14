@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, BellDot, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 
 interface Notification {
@@ -218,10 +219,12 @@ function NotificationCard({
 
             {/* Image */}
             {expanded && notification.image_url && (
-              <img
+              <Image
                 src={notification.image_url}
                 alt={notification.title}
-                className="mt-3 rounded-lg max-w-full h-auto"
+                width={500}
+                height={300}
+                className="mt-3 rounded-lg w-full h-auto object-cover"
               />
             )}
 

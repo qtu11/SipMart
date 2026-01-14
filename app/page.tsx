@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { QrCode, Wallet, Trophy, Leaf, ArrowRight, LogIn, Sparkles, TrendingUp, MapPin, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { onAuthChange } from '@/lib/supabase/auth';
 import { authFetch } from '@/lib/supabase/authFetch';
 import { logger } from '@/lib/logger';
@@ -26,6 +28,26 @@ export default function Home() {
   });
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Handle success notifications from borrow/return
+  useEffect(() => {
+    const borrowSuccess = searchParams.get('borrowSuccess');
+    const returnSuccess = searchParams.get('returnSuccess');
+
+    if (borrowSuccess === 'true') {
+      toast.success('🌟 Mượn ly thành công! Bạn vừa giúp giảm 1 ly nhựa!');
+      // Clear query param
+      router.replace('/');
+    }
+
+    if (returnSuccess === 'true') {
+      toast.success('✅ Trả ly thành công! Cảm ơn bạn đã bảo vệ môi trường!');
+      // Clear query param
+      router.replace('/');
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     // Lắng nghe thay đổi auth state
@@ -51,6 +73,20 @@ export default function Home() {
             }
           })
           .catch(err => logger.error('Error fetching stats', { error: err }));
+
+        // Fetch fresh profile data (Avatar/Name)
+        authFetch('/api/user/profile')
+          .then(res => {
+            if (res.ok) return res.json();
+            return null;
+          })
+          .then(profile => {
+            if (profile) {
+              // Merge DB profile with Auth user to ensure avatar is up-to-date
+              setUser((prev: any) => ({ ...prev, ...profile }));
+            }
+          })
+          .catch(err => console.error('Error fetching profile on home', err));
       }
     });
 
@@ -107,7 +143,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-                CupSipMart
+                SipSmart
               </h1>
               <p className="text-xs text-dark-500">Mượn ly, Cứu hành tinh</p>
             </div>

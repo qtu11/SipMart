@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Ticket, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authFetch } from '@/lib/supabase/authFetch';
@@ -31,11 +31,7 @@ export default function AdminVouchersPage() {
     const [search, setSearch] = useState('');
     const [filterActive, setFilterActive] = useState<boolean | null>(null);
 
-    useEffect(() => {
-        fetchVouchers();
-    }, [search, filterActive]);
-
-    const fetchVouchers = async () => {
+    const fetchVouchers = useCallback(async () => {
         try {
             setLoading(true);
             const params = new URLSearchParams();
@@ -52,7 +48,11 @@ export default function AdminVouchersPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [search, filterActive]);
+
+    useEffect(() => {
+        fetchVouchers();
+    }, [fetchVouchers]);
 
     const handleDelete = async (voucherId: string) => {
         if (!confirm('Bạn có chắc muốn xóa voucher này?')) return;

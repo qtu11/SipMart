@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Settings as SettingsIcon, DollarSign, Clock, Sparkles, Award, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -35,11 +35,7 @@ export default function AdminSettingsPage() {
     });
     const router = useRouter();
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         try {
             const user = await getCurrentUserAsync();
             if (!user) {
@@ -60,7 +56,11 @@ export default function AdminSettingsPage() {
             toast.error('Lỗi kiểm tra quyền truy cập');
             router.push('/');
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
 
     const loadSettings = async () => {
         try {

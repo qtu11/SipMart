@@ -127,7 +127,7 @@ export default function QRCodeDisplay({ qrCodes, onClose }: QRCodeDisplayProps) 
     // Create download link
     const link = document.createElement('a');
     link.href = qr.qrImage;
-    link.download = `QR_CupSipSmart_${qr.cupId}.png`;
+    link.download = `QR_SipSmart_${qr.cupId}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

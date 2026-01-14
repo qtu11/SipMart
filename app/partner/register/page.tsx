@@ -13,6 +13,7 @@ export default function RegisterPartnerPage() {
     const [formData, setFormData] = useState({
         storeName: '',
         ownerName: '',
+        businessType: '',
         address: '',
         phone: '',
         email: '',
@@ -23,13 +24,27 @@ export default function RegisterPartnerPage() {
         e.preventDefault();
         setIsLoading(true);
 
-        // Mock API call
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            toast.success('Đăng ký thành công! Chúng tôi sẽ liên hệ sớm.');
-            router.push('/map');
-        } catch (error) {
-            toast.error('Có lỗi xảy ra. Vui lòng thử lại.');
+            const res = await fetch('/api/partner/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Đăng ký thất bại');
+            }
+
+            toast.success(data.message || 'Đăng ký thành công!');
+
+            // Redirect based on response or logic
+            setTimeout(() => router.push('/partner/dashboard'), 1500);
+
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
         } finally {
             setIsLoading(false);
         }
@@ -62,9 +77,9 @@ export default function RegisterPartnerPage() {
                         <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Store className="w-10 h-10 text-primary-600" />
                         </div>
-                        <h2 className="text-2xl font-bold text-dark-800 mb-2">Trở thành Điểm Mượn Ly</h2>
+                        <h2 className="text-2xl font-bold text-dark-800 mb-2">Đăng ký Đối tác</h2>
                         <p className="text-dark-500">
-                            Tham gia mạng lưới CupSipSmart để thu hút khách hàng xanh và bảo vệ môi trường
+                            Tham gia mạng lưới SipSmart để thu hút khách hàng xanh và bảo vệ môi trường
                         </p>
                     </div>
 
@@ -96,6 +111,31 @@ export default function RegisterPartnerPage() {
                                 placeholder="Họ và tên của bạn"
                                 className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-dark-700 mb-2">Loại kinh doanh</label>
+                            <div className="relative">
+                                <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                                <select
+                                    name="businessType"
+                                    required
+                                    value={formData.businessType}
+                                    onChange={handleChange as any}
+                                    className="w-full pl-12 pr-4 py-3 border border-dark-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none bg-white"
+                                >
+                                    <option value="" disabled>Chọn mô hình kinh doanh</option>
+                                    <option value="cafe">Quán Cafe</option>
+                                    <option value="store">Cửa hàng tiện lợi (Bách hóa xanh, ...)</option>
+                                    <option value="supermarket">Siêu thị / TTTM (Vincom, Go!, ...)</option>
+                                    <option value="electronic">Điện máy (Điện máy xanh, ...)</option>
+                                    <option value="transport_bus">Vận tải - Xe Bus</option>
+                                    <option value="transport_ev">Vận tải - Xe điện (Taxi, Tram)</option>
+                                    <option value="office">Tòa nhà văn phòng</option>
+                                    <option value="school">Trường học / Campus</option>
+                                    <option value="other">Khác</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div>

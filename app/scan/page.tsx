@@ -135,11 +135,26 @@ export default function ScanPage() {
 
       const cupId = parsed.cupId;
 
+      // Get current session token
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        router.push('/auth/login');
+        setProcessing(false);
+        return;
+      }
+
       // Gọi API để nhận diện hành vi
       const res = await fetch('/api/qr/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cupId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ qrData }),
       });
 
       const data = await res.json();
@@ -181,8 +196,9 @@ export default function ScanPage() {
     setProcessing(true);
     try {
       // Sử dụng html5-qrcode để decode từ file
-      // Tạo instance với ID tạm thời (không cần mount vào DOM cho file scan)
-      const tempId = `temp-qr-scanner-${Date.now()}`;
+      // Sử dụng html5-qrcode để decode từ file
+      // Sử dụng div ẩn có sẵn trong DOM để tránh lỗi element not found
+      const tempId = 'file-scan-temp';
       const html5QrCode = new Html5Qrcode(tempId);
 
       // Decode từ file (true = verbose logging)
@@ -222,20 +238,45 @@ export default function ScanPage() {
       return;
     }
 
-    // Lấy storeId từ location hoặc user selection
-    const storeId = 'store1'; // Mock
-
     try {
+      // Get auth token & fetch cup's storeId
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast.error('Phiên đăng nhập đã hết hạn.');
+        router.push('/auth/login');
+        return;
+      }
+
+      // Fetch storeId from cup
+      const { data: cupData, error: cupError } = await supabase
+        .from('cups')
+        .select('store_id')
+        .eq('cup_id', cupId)
+        .single();
+
+      if (cupError || !cupData?.store_id) {
+        toast.error('Không tìm thấy thông tin cửa hàng của ly.');
+        return;
+      }
+
+      const storeId = cupData.store_id;
+
       const res = await fetch('/api/borrow', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cupId, storeId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ cupId, storeId }),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message);
-        setTimeout(() => router.push('/'), 2000);
+        // Redirect to home with success notification
+        router.push('/?borrowSuccess=true');
       } else {
         toast.error(data.error);
       }
@@ -255,16 +296,30 @@ export default function ScanPage() {
     const storeId = 'store1'; // Mock
 
     try {
+      // Get auth token
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast.error('Phiên đăng nhập đã hết hạn.');
+        router.push('/auth/login');
+        return;
+      }
+
       const res = await fetch('/api/return', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cupId, storeId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ cupId, storeId }),
       });
 
       const data = await res.json();
       if (data.success) {
-        toast.success(data.message);
-        setTimeout(() => router.push('/'), 2000);
+        // Redirect to home with success notification
+        router.push('/?returnSuccess=true');
       } else {
         toast.error(data.error);
       }
@@ -430,6 +485,9 @@ export default function ScanPage() {
             </button>
           </div>
         )}
+
+        {/* Hidden div for file scanning */}
+        <div id="file-scan-temp" style={{ display: 'none' }} />
 
         {/* Result Modal */}
         <AnimatePresence>

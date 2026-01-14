@@ -4,17 +4,15 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, X, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
+import { useCallback } from 'react';
 
 export default function AdminStoriesPage() {
     const [stories, setStories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
 
-    useEffect(() => {
-        fetchPendingStories();
-    }, []);
-
-    const fetchPendingStories = async () => {
+    const fetchPendingStories = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('stories')
@@ -30,7 +28,11 @@ export default function AdminStoriesPage() {
             setStories(data || []);
         }
         setLoading(false);
-    };
+    }, [supabase]);
+
+    useEffect(() => {
+        fetchPendingStories();
+    }, [fetchPendingStories]);
 
     const handleApprove = async (storyId: string) => {
         const { error } = await supabase
@@ -77,7 +79,13 @@ export default function AdminStoriesPage() {
                         <div key={story.story_id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-4">
                             <div className="w-24 h-40 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                                 {story.type === 'image' || story.thumbnail ? (
-                                    <img src={story.thumbnail || story.content} className="w-full h-full object-cover" alt="Story" />
+                                    <Image
+                                        src={story.thumbnail || story.content}
+                                        className="object-cover"
+                                        alt="Story"
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                    />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-xs text-center p-2">
                                         {story.content}
@@ -87,7 +95,13 @@ export default function AdminStoriesPage() {
                             <div className="flex-1 flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <img src={story.avatar || 'https://via.placeholder.com/32'} className="w-6 h-6 rounded-full" />
+                                        <Image
+                                            src={story.avatar || `https://ui-avatars.com/api/?name=Admin&background=10b981`}
+                                            className="rounded-full"
+                                            alt="Avatar"
+                                            width={24}
+                                            height={24}
+                                        />
                                         <span className="font-medium text-sm">{story.display_name}</span>
                                     </div>
                                     <p className="text-xs text-gray-500 mb-2">

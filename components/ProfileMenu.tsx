@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Settings, LogOut, Bell, HelpCircle, Menu, X, Store, Sparkles, Shield } from 'lucide-react';
 import Link from 'next/link';
@@ -19,16 +19,7 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchUserStats();
-      // Check if user is admin
-      const adminStatus = isAdminEmail(user?.email || '');
-      setIsAdmin(adminStatus);
-    }
-  }, [user]);
-
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
       const res = await fetch(`/api/gamification/points?userId=${user.id}`);
       const data = await res.json();
@@ -41,7 +32,16 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
     } catch (error) {
       // Silent fail
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserStats();
+      // Check if user is admin
+      const adminStatus = isAdminEmail(user?.email || '');
+      setIsAdmin(adminStatus);
+    }
+  }, [user, fetchUserStats]);
 
   const getTierEmoji = (tier: string) => {
     const tiers: Record<string, string> = {

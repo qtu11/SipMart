@@ -1,4 +1,4 @@
--- CupSipSmart Supabase Database Schema
+-- SipSmart Supabase Database Schema
 -- Run this script in your Supabase SQL Editor
 
 -- Enable UUID extension
@@ -347,4 +347,4 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Success message
-SELECT 'CupSipSmart database schema created successfully!' AS status;
+SELECT 'SipSmart database schema created successfully!' AS status;

@@ -172,7 +172,7 @@ export default function LoginPage() {
             transition={{ duration: 0.5 }}
             className="text-4xl font-bold text-primary-600 mb-2"
           >
-            CupSipMart
+            SipSmart
           </motion.h1>
           <p className="text-dark-600">Mượn ly, Cứu hành tinh 🌍</p>
         </div>

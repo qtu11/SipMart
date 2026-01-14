@@ -23,18 +23,19 @@ function parseQRCode(qrData: string): { valid: boolean; cupId?: string; material
 
   const trimmed = qrData.trim();
 
-  // Format 1: "CUP|{cupId}|{material}|CupSipSmart"
+  // Format 1: "CUP|{cupId}|{material}|SipSmart"
   if (trimmed.startsWith('CUP|')) {
     const parts = trimmed.split('|');
-    if (parts.length >= 4 && parts[3] === 'CupSipSmart') {
+    // Accept both old and new brand for compatibility
+    if (parts.length >= 4 && (parts[3] === 'SipSmart' || parts[3] === 'CupSipSmart')) {
       const cupId = parts[1];
       const material = parts[2];
-      // Validate cupId is 8 digits
-      if (/^\d{8}$/.test(cupId)) {
+      // Validate cupId is 8 digits or UUID
+      if (/^(\d{8}|[0-9a-fA-F-]{36})$/.test(cupId)) {
         return { valid: true, cupId, material };
       }
     }
-    return { valid: false, error: 'Mã QR không đúng định dạng CupSipSmart' };
+    return { valid: false, error: 'Mã QR không đúng định dạng SipSmart' };
   }
 
   // Format 2: URL with cup_id param (backward compatibility)
@@ -42,7 +43,7 @@ function parseQRCode(qrData: string): { valid: boolean; cupId?: string; material
     try {
       const url = new URL(trimmed);
       const cupId = url.searchParams.get('cup_id');
-      if (cupId && /^\d{8}$/.test(cupId)) {
+      if (cupId && /^(\d{8}|[0-9a-fA-F-]{36})$/.test(cupId)) {
         return { valid: true, cupId };
       }
     } catch {
@@ -50,12 +51,12 @@ function parseQRCode(qrData: string): { valid: boolean; cupId?: string; material
     }
   }
 
-  // Format 3: Just 8-digit cupId (backward compatibility)
-  if (/^\d{8}$/.test(trimmed)) {
+  // Format 3: Just 8-digit cupId or UUID (backward compatibility)
+  if (/^(\d{8}|[0-9a-fA-F-]{36})$/.test(trimmed)) {
     return { valid: true, cupId: trimmed };
   }
 
-  return { valid: false, error: 'Mã QR không hợp lệ. Vui lòng quét mã QR của CupSipSmart.' };
+  return { valid: false, error: 'Mã QR không hợp lệ. Vui lòng quét mã QR của SipSmart.' };
 }
 
 export async function POST(request: NextRequest) {
@@ -74,8 +75,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { qrData, storeId } = body;
 
+    // DEBUG: Log raw QR data
+    console.log('🔍 QR Scan Debug - Raw data:', qrData);
+
     // 2. Parse QR code
     const parseResult = parseQRCode(qrData);
+    console.log('🔍 QR Scan Debug - Parse result:', parseResult);
     if (!parseResult.valid || !parseResult.cupId) {
       return NextResponse.json({
         action: 'invalid' as ScanAction,

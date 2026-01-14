@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Map, Wallet, TreeDeciduous, Trophy, Calendar, ScanLine } from 'lucide-react';
+import { Map, Wallet, TreeDeciduous, Trophy, Calendar, ScanLine, Users } from 'lucide-react';
 import NextImage from 'next/image';
 import { supabase } from '@/lib/supabase';
 
@@ -51,6 +51,25 @@ export default function LeftSidebar({ user }: { user: any }) {
         fetchUserStats();
     }, [user?.id]);
 
+    const [dailyChallenge, setDailyChallenge] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchChallenge = async () => {
+            const { data } = await supabase
+                .from('challenges')
+                .select('*')
+                .eq('is_active', true)
+                .eq('type', 'daily')
+                .gt('end_date', new Date().toISOString())
+                .limit(1)
+                .maybeSingle();
+
+            if (data) setDailyChallenge(data);
+        };
+
+        fetchChallenge();
+    }, []);
+
     const rankEmojis: Record<string, string> = {
         seed: '🌱',
         sprout: '🌿',
@@ -74,10 +93,11 @@ export default function LeftSidebar({ user }: { user: any }) {
                 <div className="flex items-center gap-3 mb-4">
                     <div className="relative w-12 h-12 rounded-full border-2 border-green-100 overflow-hidden">
                         <NextImage
-                            src={user?.avatar_url || (user?.id && `https://ui-avatars.com/api/?name=${stats.display_name || user?.email || 'User'}`) || '/placeholder-avatar.png'}
+                            src={user?.avatar || user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(stats.display_name || user?.displayName || user?.email || 'User')}&background=random`}
                             alt={stats.display_name || "User profile"}
                             fill
                             className="object-cover"
+                            unoptimized={true}
                         />
                     </div>
                     <div>
@@ -109,6 +129,7 @@ export default function LeftSidebar({ user }: { user: any }) {
                 <SidebarItem icon={<TreeDeciduous className="w-5 h-5" />} label="Vườn cây ảo" href="/garden" />
                 <SidebarItem icon={<Trophy className="w-5 h-5" />} label="Thử thách" href="/challenges" />
                 <SidebarItem icon={<Calendar className="w-5 h-5" />} label="Sự kiện" href="/events" />
+                <SidebarItem icon={<Users className="w-5 h-5" />} label="Đăng ký đối tác" href="/partner/register" />
             </nav>
 
             {/* Mini Challenge Widget */}
@@ -119,10 +140,16 @@ export default function LeftSidebar({ user }: { user: any }) {
                         <span className="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded block">Thử thách ngày</span>
                         <Trophy className="w-4 h-4 text-yellow-300" />
                     </div>
-                    <h4 className="font-bold mb-1">Mượn ly không nhựa</h4>
-                    <p className="text-xs opacity-90 mb-3">Hoàn thành để nhận +50 điểm</p>
+                    <h4 className="font-bold mb-1">
+                        {dailyChallenge ? dailyChallenge.name : 'Chưa có thử thách'}
+                    </h4>
+                    <p className="text-xs opacity-90 mb-3">
+                        {dailyChallenge
+                            ? `Hoàn thành để nhận +${dailyChallenge.reward_points} điểm`
+                            : 'Hãy quay lại vào ngày mai nhé!'}
+                    </p>
                     <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-white w-2/3 h-full rounded-full"></div>
+                        <div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: dailyChallenge ? '0%' : '0%' }}></div>
                     </div>
                 </div>
             </div>

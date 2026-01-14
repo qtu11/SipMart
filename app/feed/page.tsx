@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { logger } from '@/lib/logger';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import FallingLeaves from '@/components/FallingLeaves';
+import SocialLayout from '@/components/social/SocialLayout';
 
 interface FeedPost {
   postId: string;
@@ -241,20 +242,15 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-dark-800">Green Feed</h1>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="w-10 h-10 bg-primary-500 text-white rounded-full flex items-center justify-center hover:bg-primary-600 transition shadow-medium"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+    <SocialLayout user={user}>
+      <div className="space-y-6">
+        {/* Upload Button */}
+        <button
+          onClick={() => setShowUpload(true)}
+          className="fixed right-4 bottom-24 md:bottom-4 w-14 h-14 bg-primary-500 text-white rounded-full flex items-center justify-center hover:bg-primary-600 transition shadow-lg z-20"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
         {posts.length === 0 ? (
           <div className="text-center py-12">
             <ImageIcon className="w-16 h-16 text-dark-300 mx-auto mb-4" />
@@ -444,88 +440,88 @@ export default function FeedPage() {
             </motion.div>
           ))
         )}
-      </main>
 
-      {/* Upload Modal */}
-      {showUpload && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-dark-800">Đăng ảnh</h2>
-              <button
-                onClick={() => {
-                  setShowUpload(false);
-                  setSelectedImage(null);
-                  setCaption('');
-                }}
-                className="w-8 h-8 flex items-center justify-center hover:bg-dark-100 rounded-lg transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        {/* Upload Modal */}
+        {showUpload && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-dark-800">Đăng ảnh</h2>
+                <button
+                  onClick={() => {
+                    setShowUpload(false);
+                    setSelectedImage(null);
+                    setCaption('');
+                  }}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-dark-100 rounded-lg transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            {selectedImage ? (
-              <div className="space-y-4">
-                <div className="w-full aspect-square relative bg-dark-100 rounded-xl overflow-hidden">
-                  <Image
-                    src={URL.createObjectURL(selectedImage)}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
+              {selectedImage ? (
+                <div className="space-y-4">
+                  <div className="w-full aspect-square relative bg-dark-100 rounded-xl overflow-hidden">
+                    <Image
+                      src={URL.createObjectURL(selectedImage)}
+                      alt="Preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <textarea
+                    placeholder="Thêm chú thích..."
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    className="w-full px-4 py-3 border border-dark-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows={3}
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedImage(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="flex-1 px-4 py-3 border border-dark-200 rounded-xl font-semibold hover:bg-dark-50 transition"
+                    >
+                      Chọn lại
+                    </button>
+                    <button
+                      onClick={handleUpload}
+                      disabled={uploading}
+                      className="flex-1 px-4 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition disabled:opacity-50"
+                    >
+                      {uploading ? 'Đang đăng...' : 'Đăng'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-64 border-2 border-dashed border-dark-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 transition"
+                  >
+                    <Camera className="w-16 h-16 text-dark-400 mb-4" />
+                    <p className="text-dark-600 font-semibold">Chọn ảnh để đăng</p>
+                    <p className="text-sm text-dark-400 mt-1">JPG, PNG tối đa 5MB</p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
                   />
                 </div>
-                <textarea
-                  placeholder="Thêm chú thích..."
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  className="w-full px-4 py-3 border border-dark-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  rows={3}
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setSelectedImage(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="flex-1 px-4 py-3 border border-dark-200 rounded-xl font-semibold hover:bg-dark-50 transition"
-                  >
-                    Chọn lại
-                  </button>
-                  <button
-                    onClick={handleUpload}
-                    disabled={uploading}
-                    className="flex-1 px-4 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition disabled:opacity-50"
-                  >
-                    {uploading ? 'Đang đăng...' : 'Đăng'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-64 border-2 border-dashed border-dark-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 transition"
-                >
-                  <Camera className="w-16 h-16 text-dark-400 mb-4" />
-                  <p className="text-dark-600 font-semibold">Chọn ảnh để đăng</p>
-                  <p className="text-sm text-dark-400 mt-1">JPG, PNG tối đa 5MB</p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-              </div>
-            )}
-          </motion.div>
-        </div>
-      )}
-    </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </div>
+    </SocialLayout>
   );
 }

@@ -4,13 +4,14 @@ import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import Script from 'next/script';
 import Footer from '@/components/Footer';
+import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'CupSipSmart - Mượn Ly Sành Điệu, Sống Xanh Đúng Điệu',
-  description: 'CupSipSmart là nền tảng tiên phong giúp thế hệ trẻ trải nghiệm lối sống không rác thải nhựa. Mượn ly dễ dàng tại mọi cửa hàng đối tác, tích điểm xanh và nhận ưu đãi độc quyền. Cùng chúng mình cứu hành tinh từ những ngụm nước nhỏ nhất!',
-  keywords: 'CupSipSmart, mượn ly, bảo vệ môi trường, rác thải nhựa, Gen Z, sống bền vững',
+  title: 'SipSmart - Mượn Ly Sành Điệu, Sống Xanh Đúng Điệu',
+  description: 'SipSmart là nền tảng tiên phong giúp thế hệ trẻ trải nghiệm lối sống không rác thải nhựa. Mượn ly dễ dàng tại mọi cửa hàng đối tác, tích điểm xanh và nhận ưu đãi độc quyền. Cùng chúng mình cứu hành tinh từ những ngụm nước nhỏ nhất!',
+  keywords: 'SipSmart, mượn ly, bảo vệ môi trường, rác thải nhựa, Gen Z, sống bền vững',
 
   // Thêm Logo Favicon
   icons: {
@@ -20,16 +21,16 @@ export const metadata: Metadata = {
 
   // Thêm OG Image để hiển thị khi share link
   openGraph: {
-    title: 'CupSipSmart - Giải Pháp Ly Tái Sử Dụng Thông Minh',
-    description: 'Tham gia cộng đồng sống xanh cùng CupSipSmart ngay hôm nay!',
+    title: 'SipSmart - Giải Pháp Ly Tái Sử Dụng Thông Minh',
+    description: 'Tham gia cộng đồng sống xanh cùng SipSmart ngay hôm nay!',
     url: 'https://sipsmart.vn',
-    siteName: 'CupSipSmart',
+    siteName: 'SipSmart',
     images: [
       {
         url: 'https://files.catbox.moe/6w06d9.png',
         width: 1200,
         height: 630,
-        alt: 'CupSipSmart Social Preview',
+        alt: 'SipSmart Social Preview',
       },
     ],
     locale: 'vi_VN',
@@ -48,10 +49,12 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          <ClientLayoutWrapper>
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </ClientLayoutWrapper>
         </div>
         <Toaster
           position="top-center"

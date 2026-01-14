@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const emailContent = {
       to: email,
-      subject: 'Chào mừng đến với CupSipMart! 🌱',
+      subject: 'Chào mừng đến với SipSmart! 🌱',
       html: `
         <!DOCTYPE html>
         <html>
@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🌱 Chào mừng đến với CupSipMart!</h1>
+              <h1>🌱 Chào mừng đến với SipSmart!</h1>
             </div>
             <div class="content">
               <p>Xin chào <strong>${displayName || email}</strong>,</p>
               
               <p>Cảm ơn bạn đã tham gia cộng đồng sống xanh của chúng tôi! 🎉</p>
               
-              <p>Với CupSipMart, bạn có thể:</p>
+              <p>Với SipSmart, bạn có thể:</p>
               <ul>
                 <li>✅ Mượn ly tái sử dụng thay vì dùng ly nhựa</li>
                 <li>✅ Nhận Green Points mỗi khi trả ly đúng hạn</li>
@@ -50,17 +50,17 @@ export async function POST(request: NextRequest) {
               </ul>
               
               <p style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}" class="button">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sipsmart.vercel.app'}" class="button">
                   Bắt đầu ngay
                 </a>
               </p>
               
               <p><strong>Mẹo:</strong> Nạp tiền vào ví để sẵn sàng mượn ly. Mỗi ly cần cọc 20,000đ và sẽ được hoàn lại khi bạn trả ly!</p>
               
-              <p>Chúc bạn có trải nghiệm tuyệt vời với CupSipMart! 🌍</p>
+              <p>Chúc bạn có trải nghiệm tuyệt vời với SipSmart! 🌍</p>
             </div>
             <div class="footer">
-              <p>CupSipMart - Mượn ly, Cứu hành tinh</p>
+              <p>SipSmart - Mượn ly, Cứu hành tinh</p>
               <p>Email này được gửi tự động, vui lòng không trả lời.</p>
             </div>
           </div>
@@ -68,25 +68,25 @@ export async function POST(request: NextRequest) {
         </html>
       `,
       text: `
-Chào mừng đến với CupSipMart!
+Chào mừng đến với SipSmart!
 
 Xin chào ${displayName || email},
 
 Cảm ơn bạn đã tham gia cộng đồng sống xanh của chúng tôi!
 
-Với CupSipMart, bạn có thể:
+Với SipSmart, bạn có thể:
 - Mượn ly tái sử dụng thay vì dùng ly nhựa
 - Nhận Green Points mỗi khi trả ly đúng hạn
 - Theo dõi tác động môi trường của bạn
 - Tham gia bảng xếp hạng sống xanh
 
-Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}
+Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://sipsmart.vercel.app'}
 
 Mẹo: Nạp tiền vào ví để sẵn sàng mượn ly. Mỗi ly cần cọc 20,000đ và sẽ được hoàn lại khi bạn trả ly!
 
-Chúc bạn có trải nghiệm tuyệt vời với CupSipMart!
+Chúc bạn có trải nghiệm tuyệt vời với SipSmart!
 
-CupSipMart - Mượn ly, Cứu hành tinh
+SipSmart - Mượn ly, Cứu hành tinh
       `,
     };
 
@@ -118,4 +118,3 @@ CupSipMart - Mượn ly, Cứu hành tinh
     );
   }
 }
-

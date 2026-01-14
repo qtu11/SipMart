@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Package, Users, AlertTriangle, Plus, Download } from 'lucide-react';
+import { BarChart3, Package, Users, AlertTriangle, Plus, Download, Sparkles, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUserAsync, onAuthChange } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/supabase/admin';
 import toast from 'react-hot-toast';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import { StatCard } from '@/components/ui/StatCard';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 interface Analytics {
   totalCupsSaved: number;
@@ -229,109 +232,90 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-      <header className="bg-white shadow-soft px-4 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-dark-800">Admin Dashboard</h1>
-          <Link
-            href="/admin/users"
-            className="px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-semibold hover:bg-primary-600 transition flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Quản lý Users
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-primary-50/20 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950">
+      {/* Modern Header with Glassmorphism */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-xl shadow-soft border-b border-dark-100 dark:border-dark-800 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-glow">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-dark-800 dark:text-white">Admin Dashboard</h1>
+              <p className="text-sm text-dark-500 dark:text-dark-400">Quản lý hệ thống SipMart</p>
+            </div>
+          </div>
+          <Link href="/admin/users">
+            <Button variant="primary" size="md" icon=<Users className="w-4 h-4" />>
+              Quản lý Users
+            </Button>
           </Link>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats Grid */}
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Stats Grid với Modern StatCard */}
         {analytics && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl p-4 shadow-soft"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-5 h-5 text-primary-500" />
-                <span className="text-sm text-dark-500">Ly đã cứu</span>
-              </div>
-              <div className="text-2xl font-bold text-primary-600">
-                {analytics?.totalCupsSaved?.toLocaleString('vi-VN') || '0'}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl p-4 shadow-soft"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-5 h-5 text-primary-500" />
-                <span className="text-sm text-dark-500">Người dùng</span>
-              </div>
-              <div className="text-2xl font-bold text-primary-600">
-                {analytics?.totalUsers || 0}
-              </div>
-              <div className="text-xs text-dark-400">
-                {analytics?.activeUsers || 0} hoạt động
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl p-4 shadow-soft"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="w-5 h-5 text-primary-500" />
-                <span className="text-sm text-dark-500">Giao dịch</span>
-              </div>
-              <div className="text-2xl font-bold text-primary-600">
-                {analytics?.ongoingTransactions || 0}
-              </div>
-              <div className="text-xs text-dark-400">
-                {analytics?.overdueTransactions || 0} quá hạn
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl p-4 shadow-soft"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
-                <span className="text-sm text-dark-500">Nhựa giảm</span>
-              </div>
-              <div className="text-2xl font-bold text-primary-600">
-                {analytics?.totalPlasticReduced ? ((analytics.totalPlasticReduced / 1000).toFixed(1)) : '0.0'}kg
-              </div>
-            </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              title="Ly đã cứu"
+              value={analytics?.totalCupsSaved || 0}
+              subtitle={`${analytics?.totalUsers || 0} người dùng`}
+              icon={Package}
+              color="primary"
+              trend={{ value: 12, isPositive: true }}
+              delay={0}
+            />
+            <StatCard
+              title="Người dùng"
+              value={analytics?.totalUsers || 0}
+              subtitle={`${analytics?.activeUsers || 0} đang hoạt động`}
+              icon={Users}
+              color="blue"
+              trend={{ value: 8, isPositive: true }}
+              delay={0.1}
+            />
+            <StatCard
+              title="Giao dịch"
+              value={analytics?.ongoingTransactions || 0}
+              subtitle={`${analytics?.overdueTransactions || 0} quá hạn`}
+              icon={BarChart3}
+              color="purple"
+              trend={{ value: analytics?.overdueTransactions > 0 ? -5 : 3, isPositive: analytics?.overdueTransactions === 0 }}
+              delay={0.2}
+            />
+            <StatCard
+              title="Nhựa giảm"
+              value={analytics?.totalPlasticReduced ? `${(analytics.totalPlasticReduced / 1000).toFixed(1)}kg` : '0.0kg'}
+              subtitle="Tác động môi trường"
+              icon={AlertTriangle}
+              color="orange"
+              trend={{ value: 15, isPositive: true }}
+              delay={0.3}
+            />
           </div>
         )}
 
         {/* Create QR Codes */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl p-6 shadow-soft"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-dark-800">
-              Quản lý mã QR
-            </h2>
-            <button
-              onClick={() => setShowCreateCups(!showCreateCups)}
-              className="bg-primary-500 text-white rounded-xl px-4 py-2 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo mới
-            </button>
-          </div>
+        <Card variant="elevated" className="overflow-hidden">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/40 rounded-xl flex items-center justify-center">
+                  <Package className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                Quản lý mã QR
+              </CardTitle>
+              <Button
+                onClick={() => setShowCreateCups(!showCreateCups)}
+                variant="primary"
+                size="md"
+                icon=<Plus className="w-4 h-4" />
+              >
+                Tạo mới
+              </Button>
+            </div>
+          </CardHeader>
 
           {showCreateCups && (
             <motion.div
@@ -389,90 +373,104 @@ export default function AdminDashboard() {
                   <option value="bamboo_fiber">Sợi tre</option>
                 </select>
               </div>
-              <button
+              <Button
                 onClick={handleCreateCups}
                 disabled={isCreating || !cupForm.storeId}
-                className="w-full bg-primary-500 text-white rounded-xl py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isCreating}
+                variant="primary"
+                size="lg"
+                fullWidth
               >
-                {isCreating ? 'Đang tạo...' : 'Tạo mã QR'}
-              </button>
+                Tạo mã QR
+              </Button>
             </motion.div>
           )}
-        </motion.div>
+        </Card>
 
         {/* Store Distribution */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl p-6 shadow-soft"
-        >
-          <h2 className="text-lg font-semibold text-dark-800 mb-4">
-            Phân bổ kho
-          </h2>
-          <div className="space-y-3">
-            {analytics?.storeDistribution?.map((store) => {
-              const lowStock = store.available < 5;
-              const isLoading = loadingStore === store.storeId;
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center">
+                <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              Phân bổ kho
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analytics?.storeDistribution?.map((store) => {
+                const lowStock = store.available < 5;
+                const isLoading = loadingStore === store.storeId;
 
-              return (
-                <div
-                  key={store.storeId}
-                  className={`p-4 rounded-xl border ${lowStock
-                    ? 'border-orange-300 bg-orange-50'
-                    : 'border-dark-100'
-                    }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-dark-800">
-                      {store.storeName}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {lowStock && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                          Sắp hết
-                        </span>
-                      )}
-
-                      <button
-                        onClick={() => viewStoreCups(store.storeId)}
-                        disabled={isLoading}
-                        className="text-xs bg-white border border-dark-200 hover:bg-dark-50 text-dark-600 px-3 py-1 rounded-lg transition disabled:opacity-50"
-                      >
-                        {isLoading ? 'Đang tải...' : 'Chi tiết'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-sm">
-                    <div>
-                      <div className="text-dark-500">Có sẵn</div>
-                      <div className="font-semibold text-primary-600">
-                        {store.available}
+                return (
+                  <motion.div
+                    key={store.storeId}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileHover={{ scale: 1.01 }}
+                    className={`p-5 rounded-xl border-2 transition-all ${lowStock
+                        ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-800/10'
+                        : 'border-dark-100 dark:border-dark-700 bg-dark-50/50 dark:bg-dark-800/30'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-bold text-lg text-dark-800 dark:text-white">
+                        {store.storeName}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {lowStock && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="text-xs bg-orange-500 text-white px-3 py-1 rounded-full font-semibold shadow-md"
+                          >
+                            ⚠️ Sắp hết
+                          </motion.span>
+                        )}
+                        <Button
+                          onClick={() => viewStoreCups(store.storeId)}
+                          disabled={isLoading}
+                          loading={isLoading}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Chi tiết
+                        </Button>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-dark-500">Đang dùng</div>
-                      <div className="font-semibold text-dark-800">
-                        {store.inUse}
+                    <div className="grid grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-white dark:bg-dark-700 rounded-lg border border-dark-100 dark:border-dark-600">
+                        <div className="text-xs text-dark-500 dark:text-dark-400 mb-1">Có sẵn</div>
+                        <div className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                          {store.available}
+                        </div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-dark-700 rounded-lg border border-dark-100 dark:border-dark-600">
+                        <div className="text-xs text-dark-500 dark:text-dark-400 mb-1">Đang dùng</div>
+                        <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                          {store.inUse}
+                        </div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-dark-700 rounded-lg border border-dark-100 dark:border-dark-600">
+                        <div className="text-xs text-dark-500 dark:text-dark-400 mb-1">Vệ sinh</div>
+                        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                          {store.cleaning}
+                        </div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-dark-700 rounded-lg border border-dark-100 dark:border-dark-600">
+                        <div className="text-xs text-dark-500 dark:text-dark-400 mb-1">Tổng</div>
+                        <div className="text-xl font-bold text-dark-800 dark:text-white">
+                          {store.total}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-dark-500">Vệ sinh</div>
-                      <div className="font-semibold text-dark-800">
-                        {store.cleaning}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-dark-500">Tổng</div>
-                      <div className="font-semibold text-dark-800">
-                        {store.total}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </main >
 
       {/* QR Codes Display Modal */}

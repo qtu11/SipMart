@@ -9,9 +9,9 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 // Nên cần hardcode hoặc inject từ server
 const firebaseConfig = {
   apiKey: "AIzaSyCQei_w8Gpe_8m6_yPLmAnG6YNXN6C9zuI", // Sẽ được inject từ server
-  authDomain: "cupsipsmart.firebaseapp.com",
-  projectId: "cupsipsmart",
-  storageBucket: "cupsipsmart.firebasestorage.app",
+  authDomain: "sipsmart.firebaseapp.com",
+  projectId: "sipsmart",
+  storageBucket: "sipsmart.firebasestorage.app",
   messagingSenderId: "198174221362",
   appId: "1:198174221362:web:920f384abb62affe87482b",
 };
@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification?.body || '',
     icon: '/icon-192x192.png', // Có thể thay bằng logo của bạn
     badge: '/icon-192x192.png',
-    tag: payload.data?.notificationId || 'cupsipmart',
+    tag: payload.data?.notificationId || 'sipsmart',
     data: payload.data || {},
     requireInteraction: false,
     silent: false,
@@ -48,7 +48,7 @@ self.addEventListener('notificationclick', (event) => {
 
   // Mở hoặc focus vào app
   const urlToOpen = event.notification.data?.url || '/';
-  
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // Kiểm tra xem đã có window mở chưa

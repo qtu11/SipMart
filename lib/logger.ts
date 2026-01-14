@@ -48,21 +48,41 @@ class Logger {
         }
     }
 
-    info(message: string, context?: Record<string, unknown>): void {
-        this.writeLog(this.formatLog('info', message, context));
+    private normalizeContext(context?: unknown): Record<string, unknown> | undefined {
+        if (context === undefined || context === null) return undefined;
+        if (typeof context === 'object') {
+            // Handle Error objects
+            if (context instanceof Error) {
+                return {
+                    name: context.name,
+                    message: context.message,
+                    stack: context.stack
+                };
+            }
+            // Handle objects with message property (like PostgrestError)
+            if ('message' in context) {
+                return { ...context as Record<string, unknown> };
+            }
+            return context as Record<string, unknown>;
+        }
+        return { value: context };
     }
 
-    warn(message: string, context?: Record<string, unknown>): void {
-        this.writeLog(this.formatLog('warn', message, context));
+    info(message: string, context?: unknown): void {
+        this.writeLog(this.formatLog('info', message, this.normalizeContext(context)));
     }
 
-    error(message: string, context?: Record<string, unknown>): void {
-        this.writeLog(this.formatLog('error', message, context));
+    warn(message: string, context?: unknown): void {
+        this.writeLog(this.formatLog('warn', message, this.normalizeContext(context)));
     }
 
-    debug(message: string, context?: Record<string, unknown>): void {
+    error(message: string, context?: unknown): void {
+        this.writeLog(this.formatLog('error', message, this.normalizeContext(context)));
+    }
+
+    debug(message: string, context?: unknown): void {
         if (this.isDevelopment) {
-            this.writeLog(this.formatLog('debug', message, context));
+            this.writeLog(this.formatLog('debug', message, this.normalizeContext(context)));
         }
     }
 

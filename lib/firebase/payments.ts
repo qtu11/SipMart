@@ -164,7 +164,7 @@ export async function getPaymentTransactions(
   limit?: number
 ): Promise<PaymentTransaction[]> {
   try {
-    let q = query(
+    const q = query(
       collection(db, COLLECTIONS.PAYMENT_TRANSACTIONS),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')

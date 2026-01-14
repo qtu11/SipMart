@@ -1,4 +1,4 @@
-# 🌱 **CupSipSmart** - Smart Cup Sharing System
+# 🌱 **SipSmart** - Smart Cup Sharing System
 
 ![Qtus](https://files.catbox.moe/5smts4.jpg)
 
@@ -94,7 +94,7 @@ Mỗi ly tái sử dụng = **17g CO₂** giảm + **0.5 lít nước** tiết k
   - Miễn phí cọc 1 lần (200 points)
 
 - **Merchandise:**
-  - Túi vải CupSipSmart (1500 points)
+  - Túi vải SipSmart (1500 points)
   - Sticker pack (50 points)
 
 - **Privileges:**
@@ -187,7 +187,7 @@ Mỗi ly tái sử dụng = **17g CO₂** giảm + **0.5 lít nước** tiết k
   - Lost cups
 
 #### **2. 🎨 Custom QR Code Design**
-- **Logo** CupSipSmart ở giữa
+- **Logo** SipSmart ở giữa
 - **Màu sắc** tùy chỉnh theo material
 - **Kích thước:** 300x300, 500x500, 1000x1000
 - **Export:** PDF hàng loạt (A4, nhiều mã/trang)
@@ -329,7 +329,7 @@ Mỗi ly tái sử dụng = **17g CO₂** giảm + **0.5 lít nước** tiết k
 ### **2. Clone Repository**
 ```bash
 git clone https://github.com/qtu11/SipMart.git
-cd CupSipSmart
+cd SipSmart
 ```
 
 ### **3. Cài Đặt Dependencies**
@@ -409,7 +409,7 @@ ADMIN_PASSWORD=qtusdev
 ## 📁 **CẤU TRÚC DỰ ÁN**
 
 ```
-CupSipSmart/
+SipSmart/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API Routes
 │   │   ├── achievements/         # Achievements API
@@ -516,8 +516,8 @@ CMD ["npm", "start"]
 ```
 
 ```bash
-docker build -t cupsipsmart .
-docker run -p 3000:3000 cupsipsmart
+docker build -t sipsmart .
+docker run -p 3000:3000 sipsmart
 ```
 
 ---
@@ -549,9 +549,9 @@ MIT License
 
 ## 📞 **SUPPORT**
 
-- **Email:** support@cupsipsmart.vn
-- **Website:** https://cupsipmart-nqt-uef-edu.vercel.app/
-- **Facebook:** /CupSipSmart
+- **Email:** support@sipsmart.vn
+- **Website:** https://sipsmart-nqt-uef-edu.vercel.app/
+- **Facebook:** /SipSmart
 - **Hotline:** 1900 xxxx
 
 ---
@@ -623,6 +623,6 @@ MIT License
 
 ---
 
-**🌍 CupSipSmart - Mượn ly, Cứu hành tinh!**
+**🌍 SipSmart - Mượn ly, Cứu hành tinh!**
 
 *Made with 💚 in Vietnam*

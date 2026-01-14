@@ -23,6 +23,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.supabase.co', // Added to support Supabase Storage
       },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com', // Avatar placeholder service
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com', // Placeholder images
+      },
     ],
   },
   env: {

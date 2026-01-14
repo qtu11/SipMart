@@ -39,7 +39,8 @@ export async function createReward(data: Omit<Reward, 'rewardId' | 'createdAt'>)
     });
 
     return { success: true, rewardId };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -64,7 +65,8 @@ export async function getAllRewards(category?: RewardCategory): Promise<Reward[]
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Reward);
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -73,7 +75,8 @@ export async function getRewardById(rewardId: string): Promise<Reward | null> {
     const docRef = doc(db, COLLECTIONS.REWARDS, rewardId);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as Reward) : null;
-  } catch (error) {    return null;
+  } catch (error) {
+    return null;
   }
 }
 
@@ -84,7 +87,8 @@ export async function updateRewardStock(rewardId: string, quantity: number) {
       stock: increment(quantity),
     });
     return { success: true };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -154,7 +158,8 @@ export async function claimReward(userId: string, rewardId: string) {
       claim,
       remainingPoints: currentPoints - reward.pointsCost,
     };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -180,7 +185,8 @@ export async function getUserRewardClaims(userId: string): Promise<RewardClaim[]
     );
 
     return claims;
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -208,7 +214,8 @@ export async function updateClaimStatus(
 
     await updateDoc(docRef, updateData);
     return { success: true };
-  } catch (error) {    return { success: false, error };
+  } catch (error) {
+    return { success: false, error };
   }
 }
 
@@ -234,7 +241,8 @@ export async function getAllRewardClaims(): Promise<RewardClaim[]> {
     );
 
     return claims;
-  } catch (error) {    return [];
+  } catch (error) {
+    return [];
   }
 }
 
@@ -273,8 +281,8 @@ export async function initializeDefaultRewards() {
 
     // Merchandise
     {
-      name: 'Túi Vải CupSipSmart',
-      description: 'Túi vải canvas cao cấp với logo CupSipSmart',
+      name: 'Túi Vải SipSmart',
+      description: 'Túi vải canvas cao cấp với logo SipSmart',
       image: '/rewards/tote-bag.png',
       pointsCost: 1500,
       stock: 50,

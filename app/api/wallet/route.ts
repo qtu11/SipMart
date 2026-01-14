@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Route to appropriate payment gateway
     if (method === 'vnpay') {
       // Redirect to VNPay payment creation
-      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}/api/vnpay/create_payment`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://sipsmart.vercel.app'}/api/vnpay/create_payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, amount }),

@@ -173,7 +173,7 @@ INSERT INTO notification_templates (name, description, content_html, emoji, cate
   (
     'Chào mừng thành viên mới',
     'Template chào mừng user mới đăng ký',
-    '<h2>🎉 Chào mừng bạn đến với CupSipSmart!</h2><p>Cảm ơn bạn đã tham gia cùng chúng tôi trong hành trình bảo vệ môi trường. Hãy bắt đầu bằng việc mượn ly đầu tiên nhé! 🌱</p>',
+    '<h2>🎉 Chào mừng bạn đến với SipSmart!</h2><p>Cảm ơn bạn đã tham gia cùng chúng tôi trong hành trình bảo vệ môi trường. Hãy bắt đầu bằng việc mượn ly đầu tiên nhé! 🌱</p>',
     '🎉',
     'announcement',
     true

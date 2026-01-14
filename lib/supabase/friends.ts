@@ -105,7 +105,7 @@ export async function getFriendRequests(userId: string): Promise<FriendRequest[]
 }
 
 // Get friends list
-export async function getFriends(userId: string): Promise<string[]> {
+export async function getFriends(userId: string): Promise<any[]> {
     const { data, error } = await getAdmin()
         .from('friendships')
         .select('user_id1, user_id2')
@@ -115,9 +115,31 @@ export async function getFriends(userId: string): Promise<string[]> {
     if (!data) return [];
 
     // Extract friend IDs
-    return data.map(row =>
+    const friendIds = data.map(row =>
         row.user_id1 === userId ? row.user_id2 : row.user_id1
     );
+
+    // Get user details for all friends
+    if (friendIds.length === 0) return [];
+
+    const { data: usersData, error: usersError } = await getAdmin()
+        .from('users')
+        .select('user_id, student_id, display_name, avatar, email, green_points, rank_level')
+        .in('user_id', friendIds);
+
+    if (usersError) throw usersError;
+    if (!usersData) return [];
+
+    // Map to friend objects
+    return usersData.map((user: any) => ({
+        userId: user.user_id,
+        studentId: user.student_id,
+        displayName: user.display_name,
+        avatar: user.avatar,
+        email: user.email,
+        greenPoints: user.green_points,
+        rankLevel: user.rank_level,
+    }));
 }
 
 // Check if users are friends

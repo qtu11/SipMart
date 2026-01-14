@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal, Award } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { useRouter } from 'next/navigation';
+import { getCurrentUser } from '@/lib/supabase/auth';
+import SocialLayout from '@/components/social/SocialLayout';
 
 interface LeaderboardEntry {
   userId: string;
@@ -18,10 +21,21 @@ interface LeaderboardEntry {
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, []);
+    const checkUser = async () => {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        fetchLeaderboard();
+      } else {
+        router.push('/auth/login');
+      }
+    };
+    checkUser();
+  }, [router]);
 
   const fetchLeaderboard = async () => {
     try {
@@ -43,7 +57,7 @@ export default function LeaderboardPage() {
     return <span className="text-dark-500 font-bold">#{rank}</span>;
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center">
         <div className="text-primary-600">Đang tải...</div>
@@ -52,15 +66,14 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      <header className="bg-white/80 backdrop-blur-md shadow-soft px-4 py-4 border-b border-primary-100">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-          Bảng xếp hạng
-        </h1>
-        <p className="text-sm text-dark-500 mt-1">Thi đua sống xanh cùng cộng đồng</p>
-      </header>
-
-      <main className="max-w-md mx-auto px-4 py-6">
+    <SocialLayout user={user}>
+      <div className="max-w-md mx-auto space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
+            Bảng xếp hạng
+          </h1>
+          <p className="text-sm text-dark-500 mt-1">Thi đua sống xanh cùng cộng đồng</p>
+        </div>
         {/* Top 3 Podium - Nâng cấp */}
         {leaderboard.length >= 3 && (
           <div className="grid grid-cols-3 gap-4 mb-8">
@@ -161,8 +174,8 @@ export default function LeaderboardPage() {
             Chưa có dữ liệu xếp hạng
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </SocialLayout>
   );
 }
 

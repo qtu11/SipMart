@@ -1,5 +1,5 @@
 -- ========================================
--- CupSipSmart Complete Database Setup
+-- SipSmart Complete Database Setup
 -- Copy và paste toàn bộ file này vào Supabase SQL Editor
 -- ========================================
 

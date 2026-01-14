@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       // Note: If using 'free_deposit', set actualDepositAmount = 0 here
     }
 
-    // Tạo transaction
+    // Tạo transaction (status: ongoing)
     const transaction = await createTransaction({
       userId,
       cupId,
@@ -118,22 +118,40 @@ export async function POST(request: NextRequest) {
       durationHours: BORROW_DURATION_HOURS,
     });
 
-    // Trừ tiền cọc
-    // TODO: SECURITY - Move this into borrowCupAtomic RPC to ensure full ACID compliance
-    // Current method uses compensation pattern (refund on fail) which has a small risk of failure during refund
-    await updateWallet(userId, -actualDepositAmount);
 
-    // ATOMIC: Cập nhật cup status using database RPC (prevents all race conditions)
-    // This locks the cup row and ensures only one user can borrow it
+    // ATOMIC: Deduct Wallet & Borrow Cup in ONE database transaction
+    // This prevents race conditions and partial failures
     const { borrowCupAtomic } = await import('@/lib/supabase/cups');
-    const borrowResult = await borrowCupAtomic(cupId, userId, transaction.transactionId);
+
+    // Pass everything to RPC. RPC will:
+    // 1. Deduct wallet (if sufficient)
+    // 2. Lock cup
+    // 3. Update cup status
+    // 4. Return new balance or error
+    const borrowResult = await borrowCupAtomic(
+      cupId,
+      userId,
+      transaction.transactionId,
+      actualDepositAmount
+    );
 
     if (!borrowResult.success) {
-      // Rollback: refund user and cancel transaction
-      await updateWallet(userId, DEPOSIT_AMOUNT);
-      // Transaction will be cleaned up by cron job or can be cancelled here
-      throw new Error(borrowResult.message);
+      // Logic failure (e.g. low balance caught by DB, or cup taken)
+      // Transaction record exists but cup/wallet unchanged.
+      // We must cancel the transaction record.
+      await getSupabaseAdmin()
+        .from('transactions')
+        .update({ status: 'cancelled' })
+        .eq('transaction_id', transaction.transactionId);
+
+      // If it was a generic error, log it
+      if (borrowResult.message !== 'Insufficient wallet balance' && borrowResult.message !== 'Cup is not available') {
+        logger.error('Atomic Borrow Failed', { userId, cupId, error: borrowResult.message });
+      }
+
+      return errorResponse(borrowResult.message, 400);
     }
+
 
 
     // Cập nhật inventory

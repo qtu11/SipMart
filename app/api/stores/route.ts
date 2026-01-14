@@ -28,24 +28,29 @@ export async function GET(request: NextRequest) {
       stores = await getAllStores();
     }
 
+    // Debug log
+    console.log('[API /stores] Raw stores:', JSON.stringify(stores, null, 2));
+
     // Transform stores to match frontend interface
-    const transformedStores = (stores || []).map((store: any) => ({
-      storeId: store.storeId,
-      name: store.name,
-      address: store.address,
-      gpsLocation: {
-        lat: store.gpsLat,
-        lng: store.gpsLng
-      },
-      cupInventory: {
-        available: store.cupAvailable || 0,
-        total: store.cupTotal || 0,
-        inUse: store.cupInUse || 0,
-        cleaning: store.cupCleaning || 0
-      },
-      partnerStatus: store.partnerStatus,
-      distance: 0 // Will be calculated on frontend
-    }));
+    const transformedStores = (stores || [])
+      .filter((store: any) => store.gpsLat != null && store.gpsLng != null && !isNaN(store.gpsLat) && !isNaN(store.gpsLng))
+      .map((store: any) => ({
+        storeId: store.storeId,
+        name: store.name,
+        address: store.address,
+        gpsLocation: {
+          lat: store.gpsLat,
+          lng: store.gpsLng
+        },
+        cupInventory: {
+          available: store.cupAvailable || 0,
+          total: store.cupTotal || 0,
+          inUse: store.cupInUse || 0,
+          cleaning: store.cupCleaning || 0
+        },
+        partnerStatus: store.partnerStatus,
+        distance: 0 // Will be calculated on frontend
+      }));
 
     return jsonResponse({ stores: transformedStores });
 

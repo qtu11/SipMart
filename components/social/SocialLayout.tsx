@@ -2,11 +2,16 @@
 
 import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import SocialHeader from './Header';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 import ChatWindow from './ChatWindow';
-import MobileBottomNav from './MobileBottomNav';
+import MobileBottomNav from '@/components/MobileBottomNav';
+import NotificationPanel from './NotificationPanel';
+import MessageListPanel from './MessageListPanel';
+import MobileMenu from './MobileMenu';
+import { AnimatePresence } from 'framer-motion';
 
 interface SocialLayoutProps {
     children: React.ReactNode;
@@ -14,7 +19,11 @@ interface SocialLayoutProps {
 }
 
 export default function SocialLayout({ children, user }: SocialLayoutProps) {
+    const router = useRouter();
     const [activeConversation, setActiveConversation] = useState<any>(null);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [showMessageList, setShowMessageList] = useState(false);
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
 
     const handleSearch = (query: string) => {
         console.log("Searching for:", query);
@@ -48,7 +57,13 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-20 md:pb-0">
-            <SocialHeader user={user} onSearch={handleSearch} />
+            <SocialHeader
+                user={user}
+                onSearch={handleSearch}
+                onNotificationClick={() => setShowNotifications(!showNotifications)}
+                onMessagesClick={() => setShowMessageList(!showMessageList)}
+                onFriendSearchClick={() => router.push('/friends')}
+            />
 
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -70,7 +85,38 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
             </div>
 
             {/* Mobile Bottom Navigation */}
-            <MobileBottomNav />
+            <MobileBottomNav onMenuClick={() => setShowMobileMenu(true)} />
+
+            {/* Mobile Menu */}
+            <MobileMenu
+                isOpen={showMobileMenu}
+                onClose={() => setShowMobileMenu(false)}
+                user={user}
+            />
+
+            {/* Notification Panel */}
+            <AnimatePresence>
+                {showNotifications && (
+                    <NotificationPanel
+                        userId={user.id}
+                        onClose={() => setShowNotifications(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Message List Panel */}
+            <AnimatePresence>
+                {showMessageList && (
+                    <MessageListPanel
+                        currentUserId={user.id}
+                        onClose={() => setShowMessageList(false)}
+                        onChatSelect={(contact) => {
+                            handleChatSelect(contact);
+                            setShowMessageList(false);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Chat Window Popup */}
             {activeConversation && (

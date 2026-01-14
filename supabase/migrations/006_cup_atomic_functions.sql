@@ -2,41 +2,68 @@
 -- These functions prevent race conditions when borrowing/returning cups
 
 -- Function: Borrow cup atomically
+-- Function: Borrow cup atomically with wallet deduction
 CREATE OR REPLACE FUNCTION borrow_cup_atomic(
     p_cup_id TEXT,
     p_user_id TEXT,
-    p_transaction_id TEXT
+    p_transaction_id TEXT,
+    p_deposit_amount NUMERIC DEFAULT 0
 ) RETURNS JSONB AS $$
 DECLARE
     v_current_status TEXT;
+    v_user_balance NUMERIC;
 BEGIN
-    -- Lock the cup row for update
+    -- 1. Check User Balance & Deduct (Atomic update)
+    UPDATE users 
+    SET wallet_balance = wallet_balance - p_deposit_amount
+    WHERE user_id = p_user_id::uuid 
+    AND wallet_balance >= p_deposit_amount
+    RETURNING wallet_balance INTO v_user_balance;
+
+    IF NOT FOUND THEN
+        -- Check if user exists or just low balance
+        SELECT wallet_balance INTO v_user_balance FROM users WHERE user_id = p_user_id::uuid;
+        IF NOT FOUND THEN
+             RETURN jsonb_build_object('success', false, 'message', 'User not found');
+        ELSE
+             RETURN jsonb_build_object('success', false, 'message', 'Insufficient wallet balance');
+        END IF;
+    END IF;
+
+    -- 2. Lock the cup row for update
     SELECT status INTO v_current_status
     FROM cups
     WHERE cup_id = p_cup_id
     FOR UPDATE;
 
     IF NOT FOUND THEN
+        -- ROLLBACK balance deduction if cup not found
+        UPDATE users SET wallet_balance = wallet_balance + p_deposit_amount WHERE user_id = p_user_id::uuid;
         RETURN jsonb_build_object('success', false, 'message', 'Cup not found');
     END IF;
 
     IF v_current_status != 'available' THEN
-        RETURN jsonb_build_object('success', false, 'message', 'Cup is not available. Current status: ' || v_current_status);
+        -- ROLLBACK balance deduction if cup not available
+        UPDATE users SET wallet_balance = wallet_balance + p_deposit_amount WHERE user_id = p_user_id::uuid;
+        RETURN jsonb_build_object('success', false, 'message', 'Cup is not available', 'status', v_current_status);
     END IF;
 
-    -- Update cup to in_use
+    -- 3. Update cup to in_use
     UPDATE cups
     SET 
         status = 'in_use',
-        current_user_id = p_user_id,
-        current_transaction_id = p_transaction_id,
+        current_user_id = p_user_id::uuid,
+        current_transaction_id = p_transaction_id::uuid,
         total_uses = total_uses + 1
     WHERE cup_id = p_cup_id;
 
-    RETURN jsonb_build_object('success', true, 'message', 'Cup borrowed successfully');
+    RETURN jsonb_build_object('success', true, 'message', 'Cup borrowed successfully', 'new_balance', v_user_balance);
 
 EXCEPTION
     WHEN OTHERS THEN
+        -- Rollback logic is complex in exception block without transaction control, 
+        -- but generic SQL error usually rolls back the transaction.
+        -- Explicitly compensating here might be redundant if called via RPC/Transaction
         RETURN jsonb_build_object('success', false, 'message', SQLERRM);
 END;
 $$ LANGUAGE plpgsql;

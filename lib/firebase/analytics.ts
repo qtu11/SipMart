@@ -292,7 +292,7 @@ export async function getTransactionHistory(
   endDate?: Date
 ): Promise<TransactionHistory[]> {
   try {
-    let q = query(
+    const q = query(
       collection(db, 'transactions'),
       where('userId', '==', userId),
       orderBy('borrowTime', 'desc')

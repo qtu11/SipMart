@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+// Force HMR refresh
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 

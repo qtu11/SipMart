@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         if (cupError) throw cupError;
 
-        // Tạo QR code data với format: "CUP|{cupId}|{material}|CupSipSmart"
+        // Tạo QR code data với format: "CUP|{cupId}|{material}|SipSmart"
         const qrData = generateQRCodeData(cupId, material);
 
         cupIds.push(cupId);
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       qrDataStrings,
       qrCodes: qrCodesWithImages,
       materialDisplayName: getMaterialDisplayName(material),
-      brand: 'CupSipSmart',
+      brand: 'SipSmart',
       downloadUrl: `/api/admin/cups/export?cupIds=${cupIds.join(',')}`,
     });
   } catch (error: unknown) {

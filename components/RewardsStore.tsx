@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Gift, Award, X, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,11 +30,7 @@ export default function RewardsStore({ userId, userPoints, onPointsUpdate }: Rew
     const [claiming, setClaiming] = useState(false);
     const [filter, setFilter] = useState<'all' | Reward['category']>('all');
 
-    useEffect(() => {
-        fetchRewards();
-    }, [filter]);
-
-    const fetchRewards = async () => {
+    const fetchRewards = useCallback(async () => {
         try {
             const categoryParam = filter !== 'all' ? `?category=${filter}` : '';
             const res = await fetch(`/api/rewards${categoryParam}`);
@@ -48,7 +44,11 @@ export default function RewardsStore({ userId, userPoints, onPointsUpdate }: Rew
         } finally {
             setLoading(false);
         }
-    };
+    }, [filter]);
+
+    useEffect(() => {
+        fetchRewards();
+    }, [fetchRewards]);
 
     const handleClaimReward = async (reward: Reward) => {
         if (userPoints < reward.pointsCost) {
@@ -154,8 +154,8 @@ export default function RewardsStore({ userId, userPoints, onPointsUpdate }: Rew
                         key={cat}
                         onClick={() => setFilter(cat)}
                         className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition ${filter === cat
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
                             }`}
                     >
                         {cat === 'all' ? 'Tất cả' : cat === 'voucher' ? 'Voucher' : cat === 'merchandise' ? 'Quà tặng' : cat === 'privilege' ? 'Đặc quyền' : 'Từ thiện'}

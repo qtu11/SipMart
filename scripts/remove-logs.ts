@@ -32,7 +32,7 @@ function removeConsoleLogs(dir: string) {
     }
 }
 
-removeConsoleLogs('c:\\Users\\Public\\Lập trình\\CupSipSmart\\app');
-removeConsoleLogs('c:\\Users\\Public\\Lập trình\\CupSipSmart\\lib');
-removeConsoleLogs('c:\\Users\\Public\\Lập trình\\CupSipSmart\\components');
-removeConsoleLogs('c:\\Users\\Public\\Lập trình\\CupSipSmart\\hooks');
+removeConsoleLogs('c:\\Users\\Public\\Lập trình\\SipSmart\\app');
+removeConsoleLogs('c:\\Users\\Public\\Lập trình\\SipSmart\\lib');
+removeConsoleLogs('c:\\Users\\Public\\Lập trình\\SipSmart\\components');
+removeConsoleLogs('c:\\Users\\Public\\Lập trình\\SipSmart\\hooks');

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, GraduationCap, Calendar, Award, Edit2, Camera, LogOut } from 'lucide-react';
+import Image from 'next/image';
 import { getCurrentUserAsync, onAuthChange, signOutUser } from '@/lib/supabase/auth';
 import { UserProfile } from '@/lib/types/api';
 import { logger } from '@/lib/logger';
@@ -11,6 +12,7 @@ import { getUser, updateUser } from '@/lib/supabase/users';
 import { uploadAvatar } from '@/lib/supabase/storage';
 import toast from 'react-hot-toast';
 import SocialLayout from '@/components/social/SocialLayout';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -31,20 +33,35 @@ export default function ProfilePage() {
 
         setUser(currentUser);
 
-        // Fetch user data từ Supabase
+        // Fetch user data từ API (Server-side)
         try {
-          const userId = (currentUser as any).id || (currentUser as any).user_id;
-          const data = await getUser(userId);
-          setUserData(data);
-        } catch (error: unknown) {
-          const err = error as Error;
-          logger.error('Error fetching user data', { error });
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+
+          if (!token) {
+            console.warn('No access token found');
+            return;
+          }
+
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setUserData(data);
+          } else {
+            console.error('Failed to fetch profile:', response.status, response.statusText);
+          }
+        } catch (error) {
+          console.error('Error fetching user data endpoint', error);
         } finally {
           setLoading(false);
         }
-      } catch (error: unknown) {
-        const err = error as Error;
-        logger.error('Error checking auth', { error });
+      } catch (error) {
+        console.error('Error checking auth', error);
         router.push('/auth/login');
         setLoading(false);
       }
@@ -52,7 +69,7 @@ export default function ProfilePage() {
 
     checkAuth();
 
-    // Also listen to auth changes
+    // Listen to auth changes
     const unsubscribe = onAuthChange(async (currentUser) => {
       if (!currentUser) {
         router.push('/auth/login');
@@ -60,13 +77,24 @@ export default function ProfilePage() {
       }
       setUser(currentUser);
 
+      // Re-fetch profile on auth change
       try {
-        const userId = (currentUser as any).id || (currentUser as any).user_id;
-        const data = await getUser(userId);
-        setUserData(data);
-      } catch (error: unknown) {
-        const err = error as Error;
-        console.error('Error fetching user data:', error);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (token) {
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUserData(data);
+          }
+        }
+      } catch (error) {
+        console.error('Error re-fetching profile:', error);
       }
     });
 
@@ -105,12 +133,24 @@ export default function ProfilePage() {
       setUploading(true);
       const userId = (user as any).id || (user as any).user_id;
 
-      const publicUrl = await uploadAvatar(file, userId);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
 
-      // Update user profile in DB
-      await updateUser(userId, { avatar: publicUrl });
+      const response = await fetch('/api/user/avatar', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // Update local state is tricky because updateUser returns the updated object
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      const publicUrl = data.avatarUrl;
+
+      // Update local state
       setUserData((prev: any) => ({ ...prev, avatar: publicUrl }));
 
       toast.success('Cập nhật ảnh đại diện thành công');
@@ -159,9 +199,11 @@ export default function ProfilePage() {
             <div className="relative group">
               <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30 overflow-hidden">
                 {userData?.avatar ? (
-                  <img
+                  <Image
                     src={userData.avatar}
                     alt="Avatar"
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
                   />
                 ) : (

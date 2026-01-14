@@ -14,7 +14,7 @@ async function main() {
     console.log('🌱 Starting database seed...');
 
     // 1. Create default admin if not exists
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@cupsipsmart.vn';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@sipsmart.vn';
     const admin = await prisma.admin.upsert({
         where: { email: adminEmail },
         update: {},
@@ -29,7 +29,7 @@ async function main() {
     // 2. Create sample store
     const store = await prisma.store.create({
         data: {
-            name: 'CupSipSmart Main Station',
+            name: 'SipSmart Main Station',
             address: 'Đại học Quốc gia TP.HCM',
             gpsLat: 10.870,
             gpsLng: 106.803,
@@ -79,7 +79,7 @@ async function main() {
             {
                 badgeId: 'seed_sower',
                 name: 'Người Gieo Hạt',
-                description: 'Tham gia CupSipSmart và mượn ly lần đầu tiên',
+                description: 'Tham gia SipSmart và mượn ly lần đầu tiên',
                 icon: '🌱',
                 rarity: 'common',
                 requirement: 1,

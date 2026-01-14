@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import NextImage from 'next/image';
+import BorrowedCups from '@/components/BorrowedCups';
+
 
 export default function Feed({ user }: { user: any }) {
     const [postText, setPostText] = useState('');
@@ -169,7 +171,7 @@ export default function Feed({ user }: { user: any }) {
                 user_id: user.id,
                 content: postText,
                 display_name: user?.user_metadata?.full_name || user?.user_metadata?.name || 'Người dùng',
-                avatar: user?.user_metadata?.avatar_url,
+                avatar: user?.avatar || user?.user_metadata?.avatar_url,
                 image_url: image,
                 location: location,
                 emotion: emotion,
@@ -225,10 +227,13 @@ export default function Feed({ user }: { user: any }) {
                         className="flex-shrink-0 w-[110px] h-[190px] rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all relative border border-gray-200 group bg-white"
                     >
                         <div className="h-[65%] w-full overflow-hidden">
-                            <img
-                                src={user?.user_metadata?.avatar_url || 'https://via.placeholder.com/150'}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            <NextImage
+                                src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || 'User')}&background=random`}
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
                                 alt="My Avatar"
+                                fill
+                                sizes="(max-width: 768px) 100px, 110px"
+                                unoptimized
                             />
                         </div>
                         <div className="h-[35%] w-full bg-white relative flex flex-col items-center justify-end pb-2">
@@ -246,18 +251,24 @@ export default function Feed({ user }: { user: any }) {
                             key={story.story_id}
                             className="flex-shrink-0 w-[110px] h-[190px] rounded-xl overflow-hidden cursor-pointer shadow-sm relative group border border-gray-200"
                         >
-                            <img
-                                src={story.thumbnail || story.content || 'https://via.placeholder.com/150'}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            <NextImage
+                                src={story.thumbnail || story.content || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.userName || 'Story')}&background=4ade80`}
+                                className="object-cover group-hover:scale-105 transition-transform duration-700"
                                 alt="Story"
+                                fill
+                                sizes="(max-width: 768px) 100px, 110px"
+                                unoptimized
                             />
                             <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
                             <div className="absolute top-2 left-2 w-8 h-8 rounded-full border-2 border-green-500 p-0.5 bg-white z-10">
-                                <img
-                                    src={story.avatar || `https://ui-avatars.com/api/?name=${story.display_name}`}
-                                    className="w-full h-full rounded-full object-cover"
+                                <NextImage
+                                    src={story.avatar || story.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.display_name || 'User')}&background=random`}
+                                    className="rounded-full object-cover"
+                                    unoptimized={true}
                                     alt="Avatar"
+                                    width={32}
+                                    height={32}
                                 />
                             </div>
 
@@ -269,10 +280,20 @@ export default function Feed({ user }: { user: any }) {
                 </div>
             </div>
 
+            {/* Borrowed Cups Widget - Show Active Borrowed Cups */}
+            <BorrowedCups />
+
             {/* Post Creation */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex gap-3 mb-3">
-                    <img src={user?.user_metadata?.avatar_url || 'https://via.placeholder.com/150'} className="w-10 h-10 rounded-full" alt="Avatar" />
+                    <NextImage
+                        src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || 'User')}&background=random`}
+                        className="rounded-full object-cover"
+                        alt="Avatar"
+                        width={40}
+                        height={40}
+                        unoptimized
+                    />
                     <div className="flex-1">
                         <div className="bg-gray-50 rounded-2xl px-4 py-2 hover:bg-gray-100 transition-colors cursor-text relative group mb-2">
                             <input
@@ -375,7 +396,14 @@ export default function Feed({ user }: { user: any }) {
                         {/* Post Header */}
                         <div className="p-4 flex justify-between items-start">
                             <div className="flex gap-3">
-                                <img src={post.avatar || `https://ui-avatars.com/api/?name=${post.display_name}`} className="w-10 h-10 rounded-full border border-gray-100" alt={post.display_name} />
+                                <NextImage
+                                    src={post.avatar || post.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.display_name || 'User')}&background=random`}
+                                    className="rounded-full border border-gray-100 object-cover"
+                                    alt={post.display_name}
+                                    width={40}
+                                    height={40}
+                                    unoptimized={true}
+                                />
                                 <div>
                                     <h4 className="font-bold text-gray-900 flex items-center flex-wrap gap-1">
                                         {post.display_name}
@@ -406,8 +434,14 @@ export default function Feed({ user }: { user: any }) {
                         </div>
 
                         {post.image_url && (
-                            <div className="w-full">
-                                <img src={post.image_url} alt="Post content" className="w-full h-auto object-cover max-h-[500px]" />
+                            <div className="w-full relative">
+                                <NextImage
+                                    src={post.image_url}
+                                    alt="Post content"
+                                    width={600}
+                                    height={400}
+                                    className="w-full h-auto object-cover max-h-[500px]"
+                                />
                             </div>
                         )}
 

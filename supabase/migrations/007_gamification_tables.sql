@@ -480,7 +480,7 @@ INSERT INTO rewards (name, description, image, points_cost, stock, category, is_
   ('Voucher Cà Phê 50K', 'Giảm 50,000đ cho đơn hàng tiếp theo tại các quán đối tác', '/images/rewards/coffee-voucher.png', 500, 100, 'voucher', true),
   ('Voucher Trà Sữa 30K', 'Giảm 30,000đ cho đơn trà sữa', '/images/rewards/milk-tea-voucher.png', 300, 100, 'voucher', true),
   ('Miễn Phí Cọc 1 Lần', 'Mượn ly miễn phí tiền cọc 1 lần', '/images/rewards/free-deposit.png', 200, 50, 'privilege', true),
-  ('Túi Vải CupSipSmart', 'Túi vải thân thiện môi trường có logo CupSipSmart', '/images/rewards/eco-bag.png', 1500, 30, 'merchandise', true),
+  ('Túi Vải SipSmart', 'Túi vải thân thiện môi trường có logo SipSmart', '/images/rewards/eco-bag.png', 1500, 30, 'merchandise', true),
   ('Sticker Pack', 'Bộ sticker dễ thương về môi trường', '/images/rewards/stickers.png', 50, 200, 'merchandise', true),
   ('Priority Pass 30 Ngày', 'Ưu tiên mượn ly khi hết hàng trong 30 ngày', '/images/rewards/priority-pass.png', 800, 20, 'privilege', true),
   ('Trồng Cây Thật', 'Chúng tôi sẽ trồng 1 cây xanh có tên bạn', '/images/rewards/plant-tree.png', 5000, 10, 'charity', true)

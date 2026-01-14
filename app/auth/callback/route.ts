@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server-client';
 import { createUser } from '@/lib/supabase/users';
 import { isAdminEmail, createOrUpdateAdmin } from '@/lib/supabase/admin';
 
@@ -9,6 +9,7 @@ import { isAdminEmail, createOrUpdateAdmin } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  // NOTE: This creates a client that can access the cookie store on file
   const supabase = createClient();
 
   if (code) {

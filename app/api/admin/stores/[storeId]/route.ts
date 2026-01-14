@@ -56,8 +56,7 @@ export async function PUT(
                 address,
                 gps_lat: lat,
                 gps_lng: lng,
-                partner_status: partnerStatus || 'active',
-                updated_at: new Date().toISOString()
+                partner_status: partnerStatus || 'active'
             })
             .eq('store_id', params.storeId)
             .select()
@@ -116,8 +115,7 @@ export async function DELETE(
         const { error } = await supabase
             .from('stores')
             .update({
-                partner_status: 'archived',
-                updated_at: new Date().toISOString()
+                partner_status: 'archived'
             })
             .eq('store_id', params.storeId);
 

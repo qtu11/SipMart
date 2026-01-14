@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
         // 5. Create payment URL
         const transactionCode = `${userId}_${Date.now()}`;
-        const orderInfo = description || `Nap tien vi CupSipSmart - ${user.display_name || userId}`;
+        const orderInfo = description || `Nap tien vi SipSmart - ${user.display_name || userId}`;
 
         const paymentUrl = createVnpayUrl({
             amount,

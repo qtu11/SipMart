@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const emailContent = {
       to: email,
-      subject: '🎉 Mượn ly thành công - CupSipMart',
+      subject: '🎉 Mượn ly thành công - SipSmart',
       html: `
         <!DOCTYPE html>
         <html>
@@ -73,15 +73,15 @@ export async function POST(request: NextRequest) {
               <p>Bạn vừa giúp giảm <strong>1 ly nhựa</strong> - tương đương bớt đi <strong>450 năm ô nhiễm</strong>! Cảm ơn bạn đã góp phần bảo vệ hành tinh! 🌍</p>
               
               <p style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}/scan" class="button">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sipsmart.vercel.app'}/scan" class="button">
                   Quét QR để trả ly
                 </a>
               </p>
               
-              <p>Chúc bạn có trải nghiệm tuyệt vời với CupSipMart!</p>
+              <p>Chúc bạn có trải nghiệm tuyệt vời với SipSmart!</p>
             </div>
             <div class="footer">
-              <p>CupSipMart - Mượn ly, Cứu hành tinh</p>
+              <p>SipSmart - Mượn ly, Cứu hành tinh</p>
               <p>Email này được gửi tự động, vui lòng không trả lời.</p>
             </div>
           </div>
@@ -110,11 +110,11 @@ Thông tin giao dịch:
 🌟 Tác động môi trường:
 Bạn vừa giúp giảm 1 ly nhựa - tương đương bớt đi 450 năm ô nhiễm!
 
-Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cupsipmart-uefedu-qt.vercel.app'}/scan để trả ly
+Truy cập: ${process.env.NEXT_PUBLIC_APP_URL || 'https://sipsmart.vercel.app'}/scan để trả ly
 
-Chúc bạn có trải nghiệm tuyệt vời với CupSipMart!
+Chúc bạn có trải nghiệm tuyệt vời với SipSmart!
 
-CupSipMart - Mượn ly, Cứu hành tinh
+SipSmart - Mượn ly, Cứu hành tinh
       `,
     };
 
@@ -145,4 +145,3 @@ CupSipMart - Mượn ly, Cứu hành tinh
     );
   }
 }
-

@@ -1,6 +1,7 @@
 // Prisma Schema for CupSipSmart
 generator client {
   provider = "prisma-client-js"
+  engineType = "binary"
 }
 
 datasource db {
@@ -43,6 +44,7 @@ model User {
   stories         Story[]
   notifications   Notification[]
   virtualTree     VirtualTree?
+  merchantAccounts MerchantAccount[]
 
   @@index([email])
   @@index([studentId])
@@ -123,6 +125,10 @@ model Store {
   cupTotal        Int      @default(0)
   partnerStatus   String   @default("active") // active | inactive | pending
   createdAt       DateTime @default(now())
+
+  partnerContracts PartnerContract[]
+  settlements      Settlement[]
+  merchantAccounts MerchantAccount[]
 
   @@index([partnerStatus])
 }
@@ -582,4 +588,64 @@ model GameScore {
   @@index([gameType])
   @@index([score])
   @@index([playedAt])
+}
+
+// ============= PARTNER MANAGEMENT =============
+
+model PartnerContract {
+  contractId     String   @id @default(uuid())
+  storeId        String
+  contractType   String   // revenue_share | fixed_fee | hybrid
+  commissionRate Decimal? @default(0) @db.Decimal(5, 2)
+  fixedFee       Decimal? @default(0) @db.Decimal(12, 2)
+  startDate      DateTime @db.Date
+  endDate        DateTime? @db.Date
+  documentUrl    String?
+  status         String   @default("draft") // draft | active | expired | terminated
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model Settlement {
+  settlementId     String   @id @default(uuid())
+  storeId          String
+  periodStart      DateTime @db.Date
+  periodEnd        DateTime @db.Date
+  totalTransactions Int      @default(0)
+  totalRevenue     Decimal  @default(0) @db.Decimal(12, 2)
+  commissionAmount Decimal  @default(0) @db.Decimal(12, 2)
+  fixedFee         Decimal  @default(0) @db.Decimal(12, 2)
+  netPayable       Decimal  @default(0) @db.Decimal(12, 2)
+  status           String   @default("pending") // pending | approved | paid
+  approvedBy       String?
+  paidAt           DateTime?
+  createdAt        DateTime @default(now())
+  notes            String?
+
+  store Store @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([periodStart, periodEnd])
+}
+
+model MerchantAccount {
+  accountId   String   @id @default(uuid())
+  storeId     String
+  userId      String
+  role        String   @default("staff") // owner | manager | staff
+  pinCode     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [storeId], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([storeId])
+  @@index([userId])
 }

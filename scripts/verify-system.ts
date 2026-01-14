@@ -28,7 +28,7 @@ function addResult(name: string, status: 'pass' | 'fail' | 'warning', message: s
 // 1. Check Firebase Configuration
 function checkFirebase() {
   console.log('\n📱 Checking Firebase Configuration...');
-  
+
   const requiredVars = [
     'NEXT_PUBLIC_FIREBASE_API_KEY',
     'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
@@ -71,7 +71,7 @@ function checkFirebase() {
 // 2. Check Supabase Configuration
 function checkSupabase() {
   console.log('\n🗄️  Checking Supabase Configuration...');
-  
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -89,7 +89,7 @@ function checkSupabase() {
   try {
     const supabase = createClient(url, anonKey);
     addResult('Supabase Config', 'pass', 'Client created successfully');
-    
+
     // Test connection
     return supabase;
   } catch (error: any) {
@@ -101,7 +101,7 @@ function checkSupabase() {
 // 3. Check Supabase Database Schema
 async function checkSupabaseSchema(supabase: any) {
   console.log('\n📊 Checking Supabase Database Schema...');
-  
+
   if (!supabase) {
     addResult('Supabase Schema', 'fail', 'Cannot check - Supabase client not available');
     return false;
@@ -138,7 +138,7 @@ async function checkSupabaseSchema(supabase: any) {
 // 4. Check App Configuration
 function checkAppConfig() {
   console.log('\n⚙️  Checking App Configuration...');
-  
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const depositAmount = process.env.NEXT_PUBLIC_DEPOSIT_AMOUNT;
   const borrowDuration = process.env.NEXT_PUBLIC_BORROW_DURATION_HOURS;
@@ -167,7 +167,7 @@ function checkAppConfig() {
 // 5. Check Admin Credentials
 function checkAdminCredentials() {
   console.log('\n🔐 Checking Admin Credentials...');
-  
+
   const adminKey = process.env.ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
   const adminPassword = process.env.ADMIN_PASSWORD || process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
@@ -183,7 +183,7 @@ function checkAdminCredentials() {
 // 6. Check Optional Services
 function checkOptionalServices() {
   console.log('\n🔧 Checking Optional Services...');
-  
+
   const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -211,8 +211,8 @@ function checkOptionalServices() {
 
 // Main verification
 async function main() {
-  console.log('🔍 CupSipSmart System Verification\n');
-  console.log('=' .repeat(50));
+  console.log('🔍 SipSmart System Verification\n');
+  console.log('='.repeat(50));
 
   // Run all checks
   const firebaseOk = checkFirebase();
@@ -225,7 +225,7 @@ async function main() {
   // Summary
   console.log('\n' + '='.repeat(50));
   console.log('\n📋 Summary:');
-  
+
   const passed = results.filter(r => r.status === 'pass').length;
   const failed = results.filter(r => r.status === 'fail').length;
   const warnings = results.filter(r => r.status === 'warning').length;
@@ -249,8 +249,8 @@ async function main() {
 // Cuối file scripts/verify-system.ts
 import { fileURLToPath } from 'url';
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url) || 
-               process.argv[1]?.endsWith('verify-system.ts');
+const isMain = process.argv[1] === fileURLToPath(import.meta.url) ||
+  process.argv[1]?.endsWith('verify-system.ts');
 
 if (isMain) {
   main().catch((error) => {

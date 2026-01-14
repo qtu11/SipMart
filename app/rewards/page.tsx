@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Gift, TrendingUp, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUserAsync } from '@/lib/supabase/auth';
 import RewardsStore from '@/components/RewardsStore';
 import toast from 'react-hot-toast';
+import SocialLayout from '@/components/social/SocialLayout';
 
 interface UserRewardClaim {
     claimId: string;
@@ -26,17 +27,7 @@ export default function RewardsPage() {
     const [claims, setClaims] = useState<UserRewardClaim[]>([]);
     const router = useRouter();
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    useEffect(() => {
-        if (activeTab === 'claims' && user) {
-            fetchUserClaims();
-        }
-    }, [activeTab, user]);
-
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         try {
             const currentUser = await getCurrentUserAsync();
             if (!currentUser) {
@@ -59,9 +50,9 @@ export default function RewardsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
 
-    const fetchUserClaims = async () => {
+    const fetchUserClaims = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -74,7 +65,17 @@ export default function RewardsPage() {
         } catch (error) {
             toast.error('Không thể tải lịch sử đổi thưởng');
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
+
+    useEffect(() => {
+        if (activeTab === 'claims' && user) {
+            fetchUserClaims();
+        }
+    }, [activeTab, user, fetchUserClaims]);
 
     const handlePointsUpdate = (newPoints: number) => {
         setUserPoints(newPoints);
@@ -96,23 +97,20 @@ export default function RewardsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-            {/* Header */}
-            <header className="bg-white shadow-soft px-4 py-4 sticky top-0 z-10">
-                <div className="max-w-6xl mx-auto">
+        <SocialLayout user={user}>
+            <div className="max-w-4xl mx-auto space-y-6">
+                <div className="mb-6">
                     <h1 className="text-2xl font-bold text-dark-800">🎁 Cửa hàng Phần thưởng</h1>
                     <p className="text-dark-500 text-sm mt-1">Đổi điểm lấy quà tặng thú vị</p>
                 </div>
-            </header>
 
-            <main className="max-w-6xl mx-auto px-4 py-6">
                 {/* Tab Navigation */}
                 <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                     <button
                         onClick={() => setActiveTab('store')}
                         className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition flex items-center gap-2 ${activeTab === 'store'
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
                             }`}
                     >
                         <Gift className="w-5 h-5" />
@@ -121,8 +119,8 @@ export default function RewardsPage() {
                     <button
                         onClick={() => setActiveTab('claims')}
                         className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition flex items-center gap-2 ${activeTab === 'claims'
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
                             }`}
                     >
                         <TrendingUp className="w-5 h-5" />
@@ -131,8 +129,8 @@ export default function RewardsPage() {
                     <button
                         onClick={() => setActiveTab('achievements')}
                         className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition flex items-center gap-2 ${activeTab === 'achievements'
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-white text-dark-600 hover:bg-dark-50 border border-dark-200'
                             }`}
                     >
                         <Award className="w-5 h-5" />
@@ -193,10 +191,10 @@ export default function RewardsPage() {
                                                 <div>
                                                     <span
                                                         className={`px-3 py-1 rounded-full text-xs font-medium ${claim.status === 'claimed'
-                                                                ? 'bg-green-100 text-green-700'
-                                                                : claim.status === 'pending'
-                                                                    ? 'bg-yellow-100 text-yellow-700'
-                                                                    : 'bg-red-100 text-red-700'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : claim.status === 'pending'
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-red-100 text-red-700'
                                                             }`}
                                                     >
                                                         {claim.status === 'claimed'
@@ -229,8 +227,8 @@ export default function RewardsPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </main>
-        </div>
+            </div>
+        </SocialLayout>
     );
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Image, Gift, Smile, MoreVertical, Phone, Video } from 'lucide-react';
+import { X, Send, Image as ImageIcon, Gift, Smile, MoreVertical, Phone, Video } from 'lucide-react';
+import NextImage from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
@@ -66,7 +67,13 @@ export default function ChatWindow({ friendId, friendName, friendAvatar, friendS
             <div className="bg-white p-3 rounded-t-2xl border-b border-gray-100 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <img src={friendAvatar} alt={friendName} className="w-10 h-10 rounded-full border border-gray-100" />
+                        <NextImage
+                            src={friendAvatar}
+                            alt={friendName}
+                            width={40}
+                            height={40}
+                            className="rounded-full border border-gray-100 object-cover"
+                        />
                         <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${friendStatus === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                     </div>
                     <div>
@@ -103,11 +110,17 @@ export default function ChatWindow({ friendId, friendName, friendAvatar, friendS
                     return (
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             {!isMe && (
-                                <img src={friendAvatar} className="w-8 h-8 rounded-full mr-2 self-end mb-1" alt="Avatar" />
+                                <NextImage
+                                    src={friendAvatar}
+                                    className="rounded-full mr-2 self-end mb-1 object-cover"
+                                    alt="Avatar"
+                                    width={32}
+                                    height={32}
+                                />
                             )}
                             <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${isMe
-                                    ? 'bg-green-500 text-white rounded-br-none'
-                                    : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                                ? 'bg-green-500 text-white rounded-br-none'
+                                : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
                                 }`}>
                                 {msg.text}
                             </div>
@@ -121,7 +134,7 @@ export default function ChatWindow({ friendId, friendName, friendAvatar, friendS
             <div className="p-3 bg-white border-t border-gray-100 rounded-b-none">
                 <div className="flex gap-2 mb-2">
                     <button className="text-gray-400 hover:text-green-600 transition-colors bg-gray-50 p-1.5 rounded-lg">
-                        <Image className="w-5 h-5" />
+                        <ImageIcon className="w-5 h-5" />
                     </button>
                     <button className="text-gray-400 hover:text-pink-600 transition-colors bg-gray-50 p-1.5 rounded-lg">
                         <Gift className="w-5 h-5" />

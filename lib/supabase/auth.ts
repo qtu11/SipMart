@@ -1,6 +1,5 @@
 import { createClient } from './client';
 // We do not import createUser/admin utils here anymore to avoid client-side leakage of server logic
-import { isAdminEmail } from './admin';
 import { logger } from '../logger';
 
 // Helper to get client instance

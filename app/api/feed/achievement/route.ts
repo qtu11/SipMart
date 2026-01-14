@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
             .from('green_feed_posts')
             .insert({
                 user_id: userId,
-                image_url: `https://via.placeholder.com/800x600/22c55e/ffffff?text=${encodeURIComponent(achievementTitle)}`, // Placeholder, có thể generate image thật
+                image_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(achievementTitle)}&background=22c55e&color=fff&size=800`,
                 caption,
                 green_points_earned: greenPointsEarned,
                 post_type: 'achievement',

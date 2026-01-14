@@ -50,13 +50,15 @@ export async function getUserCups(userId: string): Promise<Cup[]> {
 export async function borrowCupAtomic(
     cupId: string,
     userId: string,
-    transactionId: string
+    transactionId: string,
+    depositAmount: number = 0
 ): Promise<{ success: boolean; message: string }> {
     const { data, error } = await getAdmin()
         .rpc('borrow_cup_atomic', {
             p_cup_id: cupId,
             p_user_id: userId,
             p_transaction_id: transactionId,
+            p_deposit_amount: depositAmount
         });
 
     if (error) {

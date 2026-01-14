@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// AI Chat Assistant cho CupSipMart sử dụng Gemini 2.0 Flash-Lite
+// AI Chat Assistant cho SipSmart sử dụng Gemini 2.0 Flash-Lite
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
-const SYSTEM_PROMPT = `Bạn là AI Assistant thân thiện và chuyên nghiệp của CupSipMart - hệ thống mượn trả ly tái sử dụng "Sip Smart" để giảm thiểu rác thải nhựa tại khu vực làng đại học.
+const SYSTEM_PROMPT = `Bạn là AI Assistant thân thiện và chuyên nghiệp của SipSmart - hệ thống mượn trả ly tái sử dụng "Sip Smart" để giảm thiểu rác thải nhựa tại khu vực làng đại học.
 
 ## KIẾN THỨC VỀ HỆ THỐNG "SIP SMART"
 
@@ -44,7 +44,7 @@ const SYSTEM_PROMPT = `Bạn là AI Assistant thân thiện và chuyên nghiệp
 
 **Nguyên lý Niềm tin thị giác (Visual Trust)**: Ly mượn phải được làm từ vật liệu chất lượng cao (nhựa PP chịu nhiệt, sợi tre), thiết kế đẹp và luôn trông sạch sẽ để sinh viên tin tưởng vào quy trình vệ sinh.
 
-### 4. Thông tin về CupSipMart App
+### 4. Thông tin về SipSmart App
 
 **Ví điện tử:**
 - Mỗi ly cần cọc 10.000đ - 15.000đ (sẽ hoàn lại khi trả)
@@ -197,7 +197,7 @@ function getFallbackResponse(message: string): string {
     lowerMessage.includes('scan') ||
     lowerMessage.includes('mã') && (lowerMessage.includes('quét') || lowerMessage.includes('qr'))
   ) {
-    return '📱 Hướng dẫn quét mã QR:\n\n**Cách 1: Quét bằng camera**\n1. Vào trang "Quét QR" trong app\n2. Nhấn nút "Bắt đầu quét"\n3. Cấp quyền truy cập camera\n4. Đưa camera vào mã QR trên ly\n5. Hệ thống sẽ tự động nhận diện!\n\n**Cách 2: Chọn ảnh từ thư viện**\n1. Vào trang "Quét QR"\n2. Nhấn nút chọn ảnh\n3. Chọn ảnh chứa mã QR từ gallery\n4. Hệ thống sẽ quét mã trong ảnh\n\n**Cách 3: Nhập thủ công**\nNếu camera không hoạt động:\n1. Nhấn nút "Nhập thủ công"\n2. Nhập mã 8 số trên ly\n3. Xác nhận\n\n💡 Lưu ý: Mã QR trên ly có format "CUP|{8 số}|{loại ly}|CupSipSmart"';
+    return '📱 Hướng dẫn quét mã QR:\n\n**Cách 1: Quét bằng camera**\n1. Vào trang "Quét QR" trong app\n2. Nhấn nút "Bắt đầu quét"\n3. Cấp quyền truy cập camera\n4. Đưa camera vào mã QR trên ly\n5. Hệ thống sẽ tự động nhận diện!\n\n**Cách 2: Chọn ảnh từ thư viện**\n1. Vào trang "Quét QR"\n2. Nhấn nút chọn ảnh\n3. Chọn ảnh chứa mã QR từ gallery\n4. Hệ thống sẽ quét mã trong ảnh\n\n**Cách 3: Nhập thủ công**\nNếu camera không hoạt động:\n1. Nhấn nút "Nhập thủ công"\n2. Nhập mã 8 số trên ly\n3. Xác nhận\n\n💡 Lưu ý: Mã QR trên ly có format "CUP|{8 số}|{loại ly}|SipSmart"';
   }
 
   if (lowerMessage.includes('mượn') || lowerMessage.includes('borrow')) {

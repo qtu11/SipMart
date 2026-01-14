@@ -27,16 +27,26 @@ export async function POST(request: NextRequest) {
       data,
     });
 
-    // TODO: Gửi push notification qua FCM
-    // FCM vẫn được dùng cho push notifications
-    // Notification đã được lưu vào Supabase để hiển thị real-time
+    // Send FCM Push Notification
+    // This is Fire-and-Forget, we don't block the response
+    if (body.fcmToken) {
+      const { sendPushNotification } = await import('@/lib/notifications/push');
+      // Don't await specifically to avoid latency, or await if critical
+      sendPushNotification(body.fcmToken, title, message, data).catch(e =>
+        console.error('FCM Push failed', e)
+      );
+    } else {
+      // Broadcast to user's registered devices (Requires storing FCM tokens in DB)
+      // For now, we assume client sends fcmToken in body or we skip if not provided
+    }
+
     return NextResponse.json({
       success: true,
       notificationId,
       message: 'Notification created successfully',
     });
   } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
+    const err = error as Error; return NextResponse.json(
       {
         success: false,
         error: err.message || 'Failed to send notification',
