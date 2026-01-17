@@ -1,188 +1,132 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Leaf, Users, Target, Heart, ArrowLeft } from 'lucide-react';
+import { Target, Heart, ArrowLeft, Globe, Zap, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-soft sticky top-0 z-40 border-b border-primary-100">
+      <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-primary-600 hover:text-primary-700 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Về trang chủ</span>
+          <Link href="/" className="flex items-center gap-2 text-dark-600 hover:text-primary-600 transition-colors group">
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Trang chủ</span>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-white" />
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+              <span className="font-bold text-white text-xs">S</span>
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-              CupSipMart
-            </h1>
+            <span className="font-bold text-dark-900">Về SipSmart</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-12">
-        {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-            Về CupSipMart
-          </h1>
-          <p className="text-xl text-dark-600 max-w-2xl mx-auto">
-            Hệ thống mượn trả ly tái sử dụng thông minh, góp phần xây dựng tương lai xanh cho thế hệ Gen Z
-          </p>
-        </motion.div>
-
-        {/* Mission Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-16"
-        >
-          <div className="bg-white rounded-3xl shadow-soft p-8 md:p-12">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center">
-                <Target className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-dark-900">Sứ mệnh của chúng tôi</h2>
-            </div>
-            <p className="text-lg text-dark-700 leading-relaxed mb-6">
-              CupSipMart được sinh ra từ tầm nhìn về một tương lai không còn rác thải nhựa dùng một lần. 
-              Chúng tôi tin rằng bằng cách thay đổi cách chúng ta uống nước, chúng ta có thể tạo ra 
-              tác động tích cực lâu dài đến môi trường.
-            </p>
-            <p className="text-lg text-dark-700 leading-relaxed">
-              Mỗi ly tái sử dụng không chỉ giảm 15g nhựa mà còn ngăn chặn 450 năm ô nhiễm. 
-              Với mô hình "Sip Smart", chúng tôi làm cho việc sống xanh trở nên dễ dàng, 
-              tiện lợi và thú vị hơn bao giờ hết.
-            </p>
-          </div>
-        </motion.section>
-
-        {/* Values Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-16"
-        >
-          <h2 className="text-3xl font-bold text-center mb-12 text-dark-900">Giá trị cốt lõi</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Leaf,
-                title: 'Bền vững',
-                description: 'Cam kết giảm thiểu rác thải nhựa và bảo vệ môi trường cho thế hệ tương lai.',
-                color: 'from-green-500 to-green-600',
-              },
-              {
-                icon: Users,
-                title: 'Cộng đồng',
-                description: 'Xây dựng cộng đồng Gen Z có ý thức môi trường, cùng nhau hành động vì tương lai xanh.',
-                color: 'from-blue-500 to-blue-600',
-              },
-              {
-                icon: Heart,
-                title: 'Đổi mới',
-                description: 'Ứng dụng công nghệ để tạo ra trải nghiệm sống xanh tiện lợi và thú vị nhất.',
-                color: 'from-primary-500 to-primary-600',
-              },
-            ].map((value, index) => (
-              <motion.div
-                key={value.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className="bg-white rounded-2xl shadow-soft p-6 hover:shadow-medium transition-shadow"
-              >
-                <div className={`w-14 h-14 bg-gradient-to-br ${value.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <value.icon className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2 text-dark-900">{value.title}</h3>
-                <p className="text-dark-600 leading-relaxed">{value.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Impact Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mb-16"
-        >
-          <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl shadow-soft p-8 md:p-12 text-white">
-            <h2 className="text-3xl font-bold mb-8 text-center">Tác động của chúng tôi</h2>
-            <div className="grid md:grid-cols-3 gap-6 text-center">
-              <div>
-                <div className="text-5xl font-bold mb-2">0.015kg</div>
-                <p className="text-lg opacity-90">Nhựa giảm thiểu mỗi ly</p>
-              </div>
-              <div>
-                <div className="text-5xl font-bold mb-2">450 năm</div>
-                <p className="text-lg opacity-90">Ô nhiễm được ngăn chặn</p>
-              </div>
-              <div>
-                <div className="text-5xl font-bold mb-2">100%</div>
-                <p className="text-lg opacity-90">Ly có thể tái sử dụng</p>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Team Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mb-16"
-        >
-          <h2 className="text-3xl font-bold text-center mb-8 text-dark-900">Đội ngũ của chúng tôi</h2>
-          <div className="bg-white rounded-3xl shadow-soft p-8 md:p-12">
-            <p className="text-lg text-dark-700 leading-relaxed mb-6">
-              CupSipMart được phát triển bởi một đội ngũ trẻ, đam mê với môi trường và công nghệ. 
-              Chúng tôi đến từ các trường đại học hàng đầu, với mong muốn tạo ra sự thay đổi tích cực 
-              trong cộng đồng sinh viên.
-            </p>
-            <p className="text-lg text-dark-700 leading-relaxed">
-              Chúng tôi hợp tác chặt chẽ với các quán nước đối tác, nhà trường và các tổ chức môi trường 
-              để xây dựng hệ sinh thái bền vững, nơi mỗi người đều có thể đóng góp vào việc bảo vệ hành tinh.
-            </p>
-          </div>
-        </motion.section>
-
-        {/* CTA Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="text-center"
-        >
-          <div className="bg-gradient-to-r from-primary-100 to-primary-50 rounded-3xl p-8 md:p-12">
-            <h2 className="text-3xl font-bold mb-4 text-dark-900">Tham gia cùng chúng tôi</h2>
-            <p className="text-lg text-dark-700 mb-6 max-w-2xl mx-auto">
-              Hãy cùng chúng tôi tạo ra tác động tích cực đến môi trường. 
-              Mỗi hành động nhỏ của bạn đều tạo nên sự khác biệt lớn.
-            </p>
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white px-8 py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+      <main>
+        {/* Intro */}
+        <section className="py-20 bg-gray-50">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <motion.span
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-primary-600 font-bold tracking-wider uppercase text-sm mb-4 block"
             >
-              Bắt đầu ngay
-            </Link>
+              Tầm nhìn & Sứ mệnh
+            </motion.span>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-5xl font-extrabold text-dark-900 mb-8 leading-tight"
+            >
+              Biến mọi hành động bảo vệ môi trường thành <span className="text-primary-600">giá trị tài chính</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-dark-600 leading-relaxed"
+            >
+              SipSmart cam kết cắt giảm rác thải nhựa thông qua Ly tái sử dụng và giảm khí thải carbon thông qua Giao thông xanh, mang lại lợi ích thực tế cho cả người dùng và doanh nghiệp.
+            </motion.p>
           </div>
-        </motion.section>
+        </section>
+
+        {/* Values Grid */}
+        <section className="py-20 max-w-6xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-16">Giá trị Cốt lõi</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="p-8 rounded-3xl bg-white shadow-lg shadow-gray-200/50 border border-gray-100 hover:border-primary-200 transition-colors">
+              <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-6">
+                <Globe className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Kinh tế Tuần hoàn</h3>
+              <p className="text-dark-600 leading-relaxed">
+                Xây dựng vòng lặp khép kín cho sản phẩm, tối ưu hóa tài nguyên và giảm thiểu tối đa rác thải ra môi trường.
+              </p>
+            </div>
+            <div className="p-8 rounded-3xl bg-white shadow-lg shadow-gray-200/50 border border-gray-100 hover:border-blue-200 transition-colors">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                <Zap className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Công nghệ Tiên phong</h3>
+              <p className="text-dark-600 leading-relaxed">
+                Ứng dụng IoT, Big Data và FinTech để tạo ra trải nghiệm sống xanh tiện lợi, thông minh và minh bạch nhất.
+              </p>
+            </div>
+            <div className="p-8 rounded-3xl bg-white shadow-lg shadow-gray-200/50 border border-gray-100 hover:border-purple-200 transition-colors">
+              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
+                <Users className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Cộng đồng Bền vững</h3>
+              <p className="text-dark-600 leading-relaxed">
+                Kết nối thế hệ Gen Z, doanh nghiệp và các tổ chức để cùng nhau tạo ra tác động tích cực lớn lao.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Impact Visual */}
+        <section className="py-20 bg-dark-900 text-white">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-16 items-center">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">Đối tác Chiến lược</h2>
+                <div className="space-y-6 text-gray-300">
+                  <p>
+                    SipSmart hợp tác với các Doanh nghiệp, Nhà trường và Đơn vị vận hành để mở rộng mạng lưới điểm chấp nhận SipSmart Cup và trạm xe điện.
+                  </p>
+                  <ul className="space-y-4">
+                    <li className="flex gap-3 items-center">
+                      <Target className="w-5 h-5 text-primary-500" />
+                      <span>Tăng doanh thu từ tệp khách hàng Gen Z.</span>
+                    </li>
+                    <li className="flex gap-3 items-center">
+                      <Target className="w-5 h-5 text-primary-500" />
+                      <span>Nhận báo cáo ESG chuẩn quốc tế (Scope 3).</span>
+                    </li>
+                    <li className="flex gap-3 items-center">
+                      <Target className="w-5 h-5 text-primary-500" />
+                      <span>Không tốn chi phí đầu tư R&D công nghệ.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div className="bg-white/10 p-8 rounded-3xl backdrop-blur-sm border border-white/10">
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2">Chia sẻ Doanh thu</h3>
+                  <div className="text-6xl font-black text-primary-400 mb-2">99.9%</div>
+                  <p className="opacity-80 mb-6">Doanh thu thuộc về Đối tác</p>
+                  <div className="inline-block bg-primary-600 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Real-time Settlement
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
 }
-
