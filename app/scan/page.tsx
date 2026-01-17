@@ -123,53 +123,83 @@ export default function ScanPage() {
       // Dừng quét để tránh quét nhiều lần
       await stopScanning();
 
-      // Parse QR code data để lấy cup ID
+      // Parse QR code data
       const { parseQRCodeData } = await import('@/lib/utils/cupId');
       const parsed = parseQRCodeData(qrData);
 
-      if (!parsed || !parsed.cupId) {
+      if (!parsed) {
         toast.error('Mã QR không hợp lệ. Vui lòng quét lại.');
         setProcessing(false);
         return;
       }
 
-      const cupId = parsed.cupId;
+      // Xử lý theo loại QR
+      if (parsed.type === 'cup' && parsed.cupId) {
+        const cupId = parsed.cupId;
 
-      // Get current session token
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+        // Get current session token to verify auth
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (!session) {
-        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        router.push('/auth/login');
-        setProcessing(false);
-        return;
+        if (!session) {
+          toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          router.push('/auth/login');
+          setProcessing(false);
+          return;
+        }
+
+        // Gọi API check status cup
+        const res = await fetch('/api/qr/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ qrData }),
+        });
+
+        const data = await res.json();
+        setResult(data);
+
+        // Tự động xử lý nếu là borrow hoặc return
+        if (data.action === 'borrow') {
+          await handleBorrow(cupId);
+        } else if (data.action === 'return') {
+          await handleReturn(cupId);
+        }
+      }
+      else if (parsed.type === 'ebike') {
+        setResult({
+          action: 'invalid', // Tạm thời dùng status này để hiện modal
+          message: `Đã quét Xe điện: ${parsed.code}`
+        });
+        toast.success(`Tìm thấy xe điện: ${parsed.code}`);
+        // TODO: Redirect to e-bike rent page
+      }
+      else if (parsed.type === 'station') {
+        setResult({
+          action: 'invalid',
+          message: `Đã quét Trạm sạc: ${parsed.code}`
+        });
+        toast.success(`Trạm sạc: ${parsed.code}`);
+        // TODO: Show station details
+      }
+      else if (parsed.type === 'bus') {
+        setResult({
+          action: 'invalid',
+          message: `Đã quét Xe Bus: ${parsed.code}`
+        });
+        toast.success(`Tuyến bus: ${parsed.code}`);
+        // TODO: Show bus route info
+      }
+      else {
+        toast.error('Loại mã QR không được hỗ trợ');
       }
 
-      // Gọi API để nhận diện hành vi
-      const res = await fetch('/api/qr/scan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ qrData }),
-      });
-
-      const data = await res.json();
-      setResult(data);
-
-      // Tự động xử lý nếu là borrow hoặc return
-      if (data.action === 'borrow') {
-        await handleBorrow(cupId);
-      } else if (data.action === 'return') {
-        await handleReturn(cupId);
-      }
     } catch (error: unknown) {
       const err = error as Error;
       toast.error('Lỗi khi quét QR');
-      // Log removed
     } finally {
       setProcessing(false);
     }

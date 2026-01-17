@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server-client';
 
 /**
  * GET /api/admin/notifications/templates
@@ -7,21 +8,14 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
  */
 export async function GET(request: NextRequest) {
     try {
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const supabase = getSupabaseAdmin();
-
-        // Get auth token from header
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        const token = authHeader.replace('Bearer ', '');
-
-        // Verify user with token
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')
@@ -60,14 +54,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
 
-        // Check admin
-        const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const supabase = getSupabaseAdmin();
         const { data: admin } = await supabase
             .from('admins')
             .select('admin_id')

@@ -15,7 +15,10 @@ import {
     Bell,
     Sparkles,
     Handshake,
-    ArrowLeft
+    ArrowLeft,
+    QrCode,
+    Bike,
+    DollarSign
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +48,21 @@ const menuItems = [
         title: 'Kho Ly',
         href: '/admin/inventory',
         icon: Package,
+    },
+    {
+        title: 'Quản lý QR',
+        href: '/admin/qr-management',
+        icon: QrCode,
+    },
+    {
+        title: 'Xe điện',
+        href: '/admin/ebike-management',
+        icon: Bike,
+    },
+    {
+        title: 'Tài chính',
+        href: '/admin/financial-hub',
+        icon: DollarSign,
     },
     {
         title: 'Vouchers',

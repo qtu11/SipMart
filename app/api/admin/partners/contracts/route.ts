@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server-client';
 
 /**
  * GET /api/admin/partners/contracts
@@ -7,16 +8,17 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
  */
 export async function GET(request: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
 
-        // Auth check
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const token = authHeader.replace('Bearer ', '');
-        const { error: authError } = await supabase.auth.getUser(token);
-        if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const supabase = getSupabaseAdmin();
+        // Check admin role
+        const { data: admin } = await supabase.from('admins').select('role').eq('admin_id', user.id).single();
+        if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const searchParams = request.nextUrl.searchParams;
         const storeId = searchParams.get('storeId');
@@ -50,16 +52,17 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
 
-        // Auth check
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const token = authHeader.replace('Bearer ', '');
-        const { error: authError } = await supabase.auth.getUser(token);
-        if (authError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const supabase = getSupabaseAdmin();
+        // Check admin role
+        const { data: admin } = await supabase.from('admins').select('role').eq('admin_id', user.id).single();
+        if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
 

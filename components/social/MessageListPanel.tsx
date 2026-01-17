@@ -19,31 +19,83 @@ export default function MessageListPanel({ currentUserId, onClose, onChatSelect 
 
     const fetchConversations = useCallback(async () => {
         try {
-            // This is simplified - in production you'd have a proper conversation list RPC
-            const { data: users, error } = await supabase
-                .from('users')
-                .select('id, display_name, avatar, email')
-                .neq('id', currentUserId)
-                .limit(20);
+            // Fetch real conversations from API
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-            if (error) throw error;
+            console.log('[MessageListPanel] Session:', { hasToken: !!token, userId: currentUserId });
 
-            const formattedContacts = (users || []).map((u: any) => ({
-                id: u.id,
-                name: u.display_name || u.email,
-                avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.display_name || u.email)}&background=random`,
-                status: 'offline', // In production, fetch from presence table
-                lastMessage: '', // In production, fetch last message
-                unread: 0, // In production, fetch unread count
-            }));
+            if (!token) {
+                console.log('[MessageListPanel] No auth token, fetching users as fallback');
+                await fetchUsersAsFallback();
+                return;
+            }
 
-            setConversations(formattedContacts);
+            const res = await fetch('/api/messaging/conversations', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            console.log('[MessageListPanel] API response status:', res.status);
+
+            // Handle 401 - fallback to users
+            if (res.status === 401) {
+                console.log('[MessageListPanel] 401 Unauthorized, fetching users as fallback');
+                await fetchUsersAsFallback();
+                return;
+            }
+
+            const data = await res.json();
+
+            if (data.success && data.conversations && data.conversations.length > 0) {
+                const formattedConversations = data.conversations.map((conv: any) => ({
+                    id: conv.otherUser?.id || conv.conversation_id,
+                    conversationId: conv.conversation_id,
+                    name: conv.otherUser?.displayName || conv.name || 'Cuộc trò chuyện',
+                    avatar: conv.otherUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.otherUser?.displayName || 'User')}&background=random`,
+                    status: 'online',
+                    lastMessage: conv.lastMessage?.content || '',
+                    lastMessageTime: conv.lastMessage?.created_at,
+                    unread: conv.unreadCount || 0,
+                }));
+                setConversations(formattedConversations);
+            } else {
+                console.log('[MessageListPanel] No conversations, fetching users as fallback');
+                await fetchUsersAsFallback();
+            }
         } catch (error) {
-            console.error('Error fetching conversations:', error);
+            console.error('[MessageListPanel] Error:', error);
+            await fetchUsersAsFallback();
         } finally {
             setLoading(false);
         }
     }, [currentUserId]);
+
+    // Helper function to fetch users as fallback
+    const fetchUsersAsFallback = async () => {
+        try {
+            const { data: users } = await supabase
+                .from('users')
+                .select('user_id, display_name, avatar, email')
+                .neq('user_id', currentUserId)
+                .limit(20);
+
+            const formattedContacts = (users || []).map((u: any) => ({
+                id: u.user_id,
+                name: u.display_name || u.email || 'Người dùng',
+                avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.display_name || u.email || 'User')}&background=random`,
+                status: 'offline',
+                lastMessage: 'Bắt đầu trò chuyện...',
+                unread: 0,
+                conversationId: null,
+            }));
+            setConversations(formattedContacts);
+        } catch (error) {
+            console.error('[MessageListPanel] Fallback users fetch error:', error);
+            setConversations([]);
+        }
+    };
 
     useEffect(() => {
         fetchConversations();

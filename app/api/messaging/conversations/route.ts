@@ -26,13 +26,15 @@ export async function GET(request: NextRequest) {
             .select(`
         conversation_id,
         last_read_at,
+        nickname,
+        theme_color,
+        bg_color,
         is_muted,
-        is_archived,
         conversations (
           conversation_id,
           type,
           name,
-          avatar,
+          image_url,
           created_at,
           last_message_at
         )
@@ -57,9 +59,9 @@ export async function GET(request: NextRequest) {
                     .limit(1)
                     .single();
 
-                // Nếu là direct chat, lấy thông tin người kia
+                // Nếu là private chat, lấy thông tin người kia
                 let otherUser = null;
-                if (conv.type === 'direct') {
+                if (conv.type === 'private') {
                     const { data: otherParticipant } = await supabase
                         .from('conversation_participants')
                         .select('user_id')
@@ -100,8 +102,10 @@ export async function GET(request: NextRequest) {
                     lastMessage,
                     otherUser,
                     unreadCount: unreadMessages?.length || 0,
-                    isMuted: p.is_muted,
-                    isArchived: p.is_archived,
+                    isMuted: p.is_muted || false,
+                    nickname: p.nickname || null,
+                    themeColor: p.theme_color || '#10b981',
+                    bgColor: p.bg_color || '#f9fafb',
                 };
             })
         );

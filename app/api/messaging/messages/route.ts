@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
         const userId = auth.userId;
         const body = await request.json();
-        const { conversationId, content, type = 'text', mediaUrl, replyTo } = body;
+        const { conversationId, content, type = 'text', mediaUrl, replyTo, metadata } = body;
 
         if (!conversationId || (!content && !mediaUrl)) {
             return NextResponse.json(
@@ -166,6 +166,7 @@ export async function POST(request: NextRequest) {
                 type,
                 media_url: mediaUrl,
                 reply_to: replyTo,
+                metadata
             })
             .select()
             .single();

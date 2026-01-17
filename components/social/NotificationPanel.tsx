@@ -18,12 +18,15 @@ export default function NotificationPanel({ userId, onClose }: NotificationPanel
 
     const fetchNotifications = useCallback(async () => {
         try {
+            console.log('[NotificationPanel] Fetching notifications for user:', userId);
             const { data, error } = await supabase
                 .from('notifications')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(20);
+
+            console.log('[NotificationPanel] Result:', { data, error });
 
             if (error) throw error;
             setNotifications(data || []);

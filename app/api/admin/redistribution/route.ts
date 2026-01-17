@@ -3,48 +3,69 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 /**
  * GET /api/admin/redistribution
- * List redistribution orders
+ * Get cup and e-bike redistribution recommendations
  */
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
     try {
         const supabase = getSupabaseAdmin();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        // Auth check
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: admin } = await supabase
-            .from('admins')
-            .select('admin_id')
-            .eq('admin_id', user.id)
-            .single();
+        // Get stores with low inventory
+        const { data: stores } = await supabase
+            .from('stores')
+            .select('store_id, name, address, cup_available, cup_total, gps_lat, gps_lng')
+            .lt('cup_available', 10)
+            .eq('is_active', true);
 
-        if (!admin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        // Get stores with excess inventory
+        const { data: excessStores } = await supabase
+            .from('stores')
+            .select('store_id, name, cup_available, cup_total')
+            .gt('cup_available', 50)
+            .eq('is_active', true);
 
-        // Fetch orders
-        const { data: orders, error } = await supabase
-            .from('redistribution_orders')
-            .select(`
-                *,
-                from_store:stores!redistribution_orders_from_store_id_fkey(name),
-                to_store:stores!redistribution_orders_to_store_id_fkey(name),
-                creator:admins(admin_id)
-            `)
-            .order('created_at', { ascending: false });
+        // Get e-bike stations needing balancing
+        const { data: lowBikeStations } = await supabase
+            .from('ebike_stations')
+            .select('station_id, name, available_bikes, total_slots, gps_lat, gps_lng')
+            .lt('available_bikes', 3)
+            .eq('is_active', true);
 
-        if (error) throw error;
+        const { data: fullStations } = await supabase
+            .from('ebike_stations')
+            .select('station_id, name, available_bikes, total_slots')
+            .gt('available_bikes', 8)
+            .eq('is_active', true);
 
-        return NextResponse.json({ orders: orders || [] });
+        // Generate recommendations
+        const cupRecommendations = generateRedistributionPlan(
+            excessStores || [],
+            stores || [],
+            'cups'
+        );
+
+        const bikeRecommendations = generateRedistributionPlan(
+            fullStations || [],
+            lowBikeStations || [],
+            'bikes'
+        );
+
+        return NextResponse.json({
+            cups: {
+                lowInventoryStores: stores || [],
+                excessInventoryStores: excessStores || [],
+                recommendations: cupRecommendations,
+            },
+            bikes: {
+                lowBikeStations: lowBikeStations || [],
+                fullStations: fullStations || [],
+                recommendations: bikeRecommendations,
+            },
+        });
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -52,68 +73,130 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/redistribution
- * Create new redistribution order
+ * Generate redistribution recommendations
  */
-export async function POST(request: NextRequest) {
+function generateRedistributionPlan(
+    sourceLocations: any[],
+    destLocations: any[],
+    assetType: 'cups' | 'bikes'
+): any[] {
+    const recommendations: any[] = [];
+
+    for (const dest of destLocations) {
+        // Find nearest source with excess
+        let bestSource = null;
+        let minDistance = Infinity;
+
+        for (const source of sourceLocations) {
+            const distance = calculateDistance(
+                source.gps_lat || 0,
+                source.gps_lng || 0,
+                dest.gps_lat || 0,
+                dest.gps_lng || 0
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestSource = source;
+            }
+        }
+
+        if (bestSource) {
+            const quantity = assetType === 'cups'
+                ? Math.min(20, bestSource.cup_available - 30)
+                : Math.min(3, bestSource.available_bikes - 5);
+
+            if (quantity > 0) {
+                recommendations.push({
+                    from: {
+                        id: bestSource.store_id || bestSource.station_id,
+                        name: bestSource.name,
+                    },
+                    to: {
+                        id: dest.store_id || dest.station_id,
+                        name: dest.name,
+                    },
+                    quantity,
+                    assetType,
+                    distanceKm: Math.round(minDistance * 10) / 10,
+                    priority: quantity > 10 ? 'high' : 'medium',
+                });
+            }
+        }
+    }
+
+    return recommendations.sort((a, b) =>
+        a.priority === 'high' ? -1 : b.priority === 'high' ? 1 : 0
+    );
+}
+
+/**
+ * Calculate distance between two GPS points (Haversine formula)
+ */
+function calculateDistance(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+/**
+ * POST /api/admin/redistribution
+ * Log completed redistribution task
+ */
+export async function POST(req: NextRequest) {
     try {
         const supabase = getSupabaseAdmin();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        // Auth check
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-        if (authError || !user) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: admin } = await supabase
-            .from('admins')
-            .select('admin_id')
-            .eq('admin_id', user.id)
-            .single();
+        const body = await req.json();
+        const { from_id, to_id, quantity, asset_type, notes } = body;
 
-        if (!admin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const body = await request.json();
-        const { from_store_id, to_store_id, cup_count, priority, notes } = body;
-
-        if (!from_store_id || !to_store_id || !cup_count) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
-
-        if (from_store_id === to_store_id) {
-            return NextResponse.json({ error: 'Source and destination stores must be different' }, { status: 400 });
-        }
-
-        const { data: order, error } = await supabase
-            .from('redistribution_orders')
+        // Log redistribution
+        const { error } = await supabase
+            .from('redistribution_logs')
             .insert({
-                from_store_id,
-                to_store_id,
-                cup_count,
-                priority: priority || 'medium',
-                status: 'pending',
+                from_location_id: from_id,
+                to_location_id: to_id,
+                quantity,
+                asset_type,
+                executed_by: user.id,
                 notes,
-                created_by: admin.admin_id
-            })
-            .select()
-            .single();
+                status: 'completed',
+            });
 
         if (error) throw error;
 
-        // In a real app, we might fire notifications to store managers here
+        // Update inventory at both locations
+        if (asset_type === 'cups') {
+            await supabase.rpc('transfer_cup_inventory', {
+                p_from_store: from_id,
+                p_to_store: to_id,
+                p_quantity: quantity,
+            });
+        }
 
-        return NextResponse.json({ order }, { status: 201 });
+        return NextResponse.json({
+            success: true,
+            message: `Transferred ${quantity} ${asset_type}`,
+        });
 
     } catch (error: any) {
-        console.error('POST redistribution error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -70,10 +70,19 @@ export async function generateUniqueCupId(): Promise<string> {
 
 /**
  * Parse QR code data
- * Format: "CUP|{cupId}|{material}|SipSmart"
+ * Format: "{TYPE}|{id}|{code}|SipSmart"
+ * Supported types: CUP, EBIKE, STATION, BUS
  * Hoặc format cũ: URL với cup_id param
  */
-export function parseQRCodeData(qrData: string): { cupId: string; material?: string } | null {
+export function parseQRCodeData(qrData: string): {
+  type: 'cup' | 'ebike' | 'station' | 'bus';
+  cupId?: string;
+  bikeId?: string;
+  stationId?: string;
+  busId?: string;
+  code?: string;
+  material?: string;
+} | null {
   try {
     // Format mới: "CUP|12345678|pp_plastic|SipSmart"
     if (qrData.startsWith('CUP|')) {
@@ -83,8 +92,44 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
         const material = parts[2];
         // Validate cupId là 8 số hoặc UUID
         if (/^(\d{8}|[0-9a-fA-F-]{36})$/.test(cupId)) {
-          return { cupId, material: material as 'pp_plastic' | 'bamboo_fiber' };
+          return { type: 'cup', cupId, material };
         }
+      }
+    }
+
+    // Format EBIKE: "EBIKE|{bikeId}|{bikeCode}|SipSmart"
+    if (qrData.startsWith('EBIKE|')) {
+      const parts = qrData.split('|');
+      if (parts.length >= 4 && parts[3] === 'SipSmart') {
+        return {
+          type: 'ebike',
+          bikeId: parts[1],
+          code: parts[2]
+        };
+      }
+    }
+
+    // Format STATION: "STATION|{stationId}|{name}|SipSmart"
+    if (qrData.startsWith('STATION|')) {
+      const parts = qrData.split('|');
+      if (parts.length >= 4 && parts[3] === 'SipSmart') {
+        return {
+          type: 'station',
+          stationId: parts[1],
+          code: parts[2]
+        };
+      }
+    }
+
+    // Format BUS: "BUS|{busId}|{routeCode}|SipSmart"
+    if (qrData.startsWith('BUS|')) {
+      const parts = qrData.split('|');
+      if (parts.length >= 4 && parts[3] === 'SipSmart') {
+        return {
+          type: 'bus',
+          busId: parts[1],
+          code: parts[2]
+        };
       }
     }
 
@@ -93,14 +138,14 @@ export function parseQRCodeData(qrData: string): { cupId: string; material?: str
       const url = new URL(qrData);
       const cupId = url.searchParams.get('cup_id');
       if (cupId) {
-        return { cupId };
+        return { type: 'cup', cupId };
       }
     }
 
     // Format đơn giản: chỉ có cup ID (8 số hoặc UUID)
     const idPattern = /^(\d{8}|[0-9a-fA-F-]{36})$/;
     if (idPattern.test(qrData.trim())) {
-      return { cupId: qrData.trim() };
+      return { type: 'cup', cupId: qrData.trim() };
     }
 
     return null;

@@ -37,21 +37,18 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
                 target_user_id: contact.id
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Error getting conversation:', error);
+                // Navigate to messages page anyway, create will happen there
+                router.push(`/messages`);
+                return;
+            }
 
-            setActiveConversation({
-                id: conversationId,
-                otherUser: {
-                    id: contact.id,
-                    name: contact.name,
-                    avatar: contact.avatar,
-                    status: contact.status
-                }
-            });
+            // Navigate to messages page with conversation ID
+            router.push(`/messages?conversationId=${conversationId}`);
         } catch (error) {
             console.error('Error opening chat:', error);
-            // Fallback for UI demo if RPC fails (though it shouldn't with correct schema)
-            // toast.error('Không thể mở cuộc trò chuyện');
+            router.push('/messages');
         }
     };
 
