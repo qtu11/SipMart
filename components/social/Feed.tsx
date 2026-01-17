@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import NextImage from 'next/image';
 import BorrowedCups from '@/components/BorrowedCups';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 
 export default function Feed({ user }: { user: any }) {
@@ -218,66 +219,120 @@ export default function Feed({ user }: { user: any }) {
                 onChange={handleStoryFileChange}
             />
 
-            {/* Stories Section - Facebook Style */}
+            {/* Stories Section - Instagram Style Premium */}
             <div className="relative">
-                <div className="flex gap-2 overflow-x-auto pb-4 pt-2 scrollbar-hide px-1">
-                    {/* Create Story Card */}
-                    <div
+                {/* Gradient fade edges */}
+                <div className="absolute left-0 top-0 bottom-4 w-8 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none" />
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide px-2"
+                >
+                    {/* Create Story Card - Premium */}
+                    <motion.div
+                        whileHover={{ scale: 1.02, y: -4 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleCreateStoryClick}
-                        className="flex-shrink-0 w-[110px] h-[190px] rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all relative border border-gray-200 group bg-white"
+                        className="flex-shrink-0 w-[120px] h-[200px] rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-green-500/10 relative group bg-gradient-to-br from-white to-gray-50 border border-gray-100"
                     >
-                        <div className="h-[65%] w-full overflow-hidden">
-                            <NextImage
-                                src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || 'User')}&background=random`}
-                                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                alt="My Avatar"
-                                fill
-                                sizes="(max-width: 768px) 100px, 110px"
-                                unoptimized
+                        {/* User avatar section */}
+                        <div className="h-[60%] w-full relative overflow-hidden bg-gray-100">
+                            <UserAvatar
+                                user={user}
+                                className="w-full h-full"
+                                size={120}
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
                         </div>
-                        <div className="h-[35%] w-full bg-white relative flex flex-col items-center justify-end pb-2">
-                            <div className="absolute -top-4 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center border-2 border-white text-white shadow-sm ring-2 ring-green-50 z-10 font-bold text-lg">
-                                +
-                            </div>
-                            <span className="text-xs font-semibold text-gray-900 mt-4">Tạo tin</span>
+
+                        {/* Create button section */}
+                        <div className="h-[40%] w-full bg-white relative flex flex-col items-center justify-end pb-3">
+                            <motion.div
+                                className="absolute -top-5 w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center border-4 border-white text-white shadow-lg shadow-green-500/40 z-10"
+                                whileHover={{ scale: 1.1 }}
+                            >
+                                <span className="text-xl font-bold">+</span>
+                            </motion.div>
+                            <span className="text-sm font-bold text-gray-800 mt-2">Tạo tin</span>
+                            <span className="text-[10px] text-gray-500">Chia sẻ ngay</span>
                         </div>
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                    </div>
+
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 to-teal-500/0 group-hover:from-green-500/5 group-hover:to-teal-500/5 transition-all duration-500" />
+                    </motion.div>
 
                     {/* Friends Stories */}
-                    {stories.map((story: any) => (
-                        <div
+                    {stories.map((story: any, index: number) => (
+                        <motion.div
                             key={story.story_id}
-                            className="flex-shrink-0 w-[110px] h-[190px] rounded-xl overflow-hidden cursor-pointer shadow-sm relative group border border-gray-200"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.1, duration: 0.3 }}
+                            whileHover={{ scale: 1.02, y: -4 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex-shrink-0 w-[120px] h-[200px] rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-gray-200/50 relative group"
                         >
+                            {/* Story image */}
                             <NextImage
                                 src={story.thumbnail || story.content || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.userName || 'Story')}&background=4ade80`}
-                                className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                className="object-cover group-hover:scale-110 transition-transform duration-700"
                                 alt="Story"
                                 fill
-                                sizes="(max-width: 768px) 100px, 110px"
+                                sizes="(max-width: 768px) 100px, 120px"
                                 unoptimized
                             />
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
-                            <div className="absolute top-2 left-2 w-8 h-8 rounded-full border-2 border-green-500 p-0.5 bg-white z-10">
-                                <NextImage
-                                    src={story.avatar || story.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.display_name || 'User')}&background=random`}
-                                    className="rounded-full object-cover"
-                                    unoptimized={true}
-                                    alt="Avatar"
-                                    width={32}
-                                    height={32}
-                                />
+                            {/* Gradient overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70" />
+
+                            {/* Avatar with animated ring */}
+                            <div className="absolute top-3 left-3">
+                                <div className="relative">
+                                    {/* Animated gradient ring */}
+                                    <motion.div
+                                        className="absolute -inset-1 bg-gradient-to-tr from-green-400 via-teal-500 to-cyan-400 rounded-full"
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                    />
+                                    <div className="relative w-9 h-9 border-2 border-white rounded-full bg-white">
+                                        <UserAvatar
+                                            src={story.avatar || story.avatar_url}
+                                            name={story.display_name}
+                                            className="w-full h-full"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <span className="absolute bottom-2 left-2 right-2 text-xs font-semibold text-white truncate z-10 text-shadow-sm">
-                                {story.display_name}
-                            </span>
-                        </div>
+                            {/* Story name */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3">
+                                <span className="text-sm font-bold text-white truncate block drop-shadow-lg">
+                                    {story.display_name}
+                                </span>
+                                <span className="text-[10px] text-white/80">
+                                    {new Date(story.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+
+                            {/* Hover shine effect */}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 transform -translate-x-full group-hover:translate-x-full" style={{ transition: 'transform 0.7s ease' }} />
+                        </motion.div>
                     ))}
-                </div>
+
+                    {/* Empty state placeholder if no stories */}
+                    {stories.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center justify-center text-gray-400 text-sm px-8 py-4"
+                        >
+                            <span>Chưa có tin mới từ bạn bè</span>
+                        </motion.div>
+                    )}
+                </motion.div>
             </div>
 
             {/* Borrowed Cups Widget - Show Active Borrowed Cups */}
@@ -286,13 +341,9 @@ export default function Feed({ user }: { user: any }) {
             {/* Post Creation */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex gap-3 mb-3">
-                    <NextImage
-                        src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || 'User')}&background=random`}
-                        className="rounded-full object-cover"
-                        alt="Avatar"
-                        width={40}
-                        height={40}
-                        unoptimized
+                    <UserAvatar
+                        user={user}
+                        className="w-10 h-10 rounded-full"
                     />
                     <div className="flex-1">
                         <div className="bg-gray-50 rounded-2xl px-4 py-2 hover:bg-gray-100 transition-colors cursor-text relative group mb-2">
@@ -397,13 +448,10 @@ export default function Feed({ user }: { user: any }) {
                         {/* Post Header */}
                         <div className="p-4 flex justify-between items-start">
                             <div className="flex gap-3">
-                                <NextImage
-                                    src={post.avatar || post.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.display_name || 'User')}&background=random`}
-                                    className="rounded-full border border-gray-100 object-cover"
-                                    alt={post.display_name}
-                                    width={40}
-                                    height={40}
-                                    unoptimized={true}
+                                <UserAvatar
+                                    src={post.avatar}
+                                    name={post.display_name}
+                                    className="w-10 h-10 border border-gray-100"
                                 />
                                 <div>
                                     <h4 className="font-bold text-gray-900 flex items-center flex-wrap gap-1">

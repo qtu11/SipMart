@@ -16,9 +16,13 @@ import {
     Sparkles,
     Handshake,
     ArrowLeft,
-    QrCode,
     Bike,
-    DollarSign
+    DollarSign,
+    Wallet,
+    ChevronDown,
+    ChevronRight,
+    Bus,
+    QrCode,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +37,11 @@ const menuItems = [
         title: 'Users',
         href: '/admin/users',
         icon: Users,
+    },
+    {
+        title: 'Ví VNES',
+        href: '/admin/wallet-management',
+        icon: Wallet,
     },
     {
         title: 'Stores',
@@ -56,13 +65,40 @@ const menuItems = [
     },
     {
         title: 'Xe điện',
-        href: '/admin/ebike-management',
         icon: Bike,
+        children: [
+            {
+                title: 'Quản lý xe',
+                href: '/admin/ebike-management',
+                icon: Bike,
+            },
+            {
+                title: 'Trạm Bus',
+                href: '/admin/bus-stations',
+                icon: Bus,
+            }
+        ]
     },
     {
         title: 'Tài chính',
-        href: '/admin/financial-hub',
         icon: DollarSign,
+        children: [
+            {
+                title: 'Financial Hub',
+                href: '/admin/financial-hub',
+                icon: DollarSign,
+            },
+            {
+                title: 'Quyết toán',
+                href: '/admin/settlements',
+                icon: Handshake,
+            },
+            {
+                title: 'Cấu hình thanh toán',
+                href: '/admin/payment-settings',
+                icon: Settings,
+            }
+        ]
     },
     {
         title: 'Vouchers',
@@ -95,6 +131,7 @@ export default function AdminSidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [isDesktop, setIsDesktop] = useState(true);
+    const [expandedItems, setExpandedItems] = useState<string[]>(['Tài chính']); // Default expand Finance
 
     useEffect(() => {
         const checkDesktop = () => {
@@ -105,6 +142,112 @@ export default function AdminSidebar() {
         window.addEventListener('resize', checkDesktop);
         return () => window.removeEventListener('resize', checkDesktop);
     }, []);
+
+    const toggleExpand = (title: string) => {
+        setExpandedItems(prev =>
+            prev.includes(title)
+                ? prev.filter(t => t !== title)
+                : [...prev, title]
+        );
+    };
+
+    const isExpanded = (title: string) => expandedItems.includes(title);
+
+    // Menu Item Component
+    const MenuItem = ({ item, depth = 0 }: { item: any, depth?: number }) => {
+        const isActive = item.href ? pathname === item.href : false;
+        const hasChildren = item.children && item.children.length > 0;
+        const expanded = isExpanded(item.title);
+        const isChildActive = hasChildren && item.children.some((child: any) => child.href === pathname);
+        const Icon = item.icon;
+
+        // Auto expand if child is active
+        useEffect(() => {
+            if (isChildActive && !expanded) {
+                setExpandedItems(prev => [...prev, item.title]);
+            }
+        }, [isChildActive, item.title]);
+
+
+        if (hasChildren) {
+            return (
+                <div className="mb-1">
+                    <motion.button
+                        onClick={() => toggleExpand(item.title)}
+                        whileHover={{ x: 4 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`
+                            w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all relative overflow-hidden
+                            ${expanded || isChildActive
+                                ? 'text-primary-600 bg-primary-50 dark:bg-primary-900/10'
+                                : 'text-dark-600 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-800/50'
+                            }
+                        `}
+                    >
+                        <Icon className={`w-5 h-5 ${expanded || isChildActive ? 'text-primary-600' : 'text-dark-400'}`} />
+                        <span className="flex-1 text-left">{item.title}</span>
+                        {expanded ? (
+                            <ChevronDown className="w-4 h-4 text-dark-400" />
+                        ) : (
+                            <ChevronRight className="w-4 h-4 text-dark-400" />
+                        )}
+                    </motion.button>
+
+                    <AnimatePresence>
+                        {expanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden bg-gray-50/50 dark:bg-dark-900/30 rounded-b-xl mb-2"
+                            >
+                                <div className="py-1">
+                                    {item.children.map((child: any) => (
+                                        <MenuItem key={child.href} item={child} depth={depth + 1} />
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        }
+
+        return (
+            <Link
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className="block mb-1"
+            >
+                <motion.div
+                    whileHover={{ x: 4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`
+                        flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all relative overflow-hidden
+                        ${depth > 0 ? 'pl-11' : ''}
+                        ${isActive
+                            ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'text-dark-600 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-800/50'
+                        }
+                    `}
+                >
+                    {isActive && (
+                        <motion.div
+                            layoutId="activeTab"
+                            className="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl"
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                    )}
+
+                    {/* Only show icon for top level items, or if explicitly provided for children (though design implies children usually just text or smaller icon) */}
+                    {depth === 0 && <Icon className={`w-5 h-5 relative z-10 ${isActive ? 'text-white' : 'text-dark-400'}`} />}
+
+                    <span className="relative z-10">{item.title}</span>
+                </motion.div>
+            </Link>
+        );
+    };
 
     return (
         <>
@@ -162,48 +305,10 @@ export default function AdminSidebar() {
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-                        {menuItems.map((item) => {
-                            const isActive = pathname === item.href;
-                            const Icon = item.icon;
-
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setIsOpen(false)}
-                                >
-                                    <motion.div
-                                        whileHover={{ x: 4, scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className={`
-                    flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all relative overflow-hidden
-                    ${isActive
-                                                ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md'
-                                                : 'text-dark-600 dark:text-dark-300 hover:bg-dark-50 dark:hover:bg-dark-800/50'
-                                            }
-                  `}
-                                    >
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeTab"
-                                                className="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl"
-                                                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                            />
-                                        )}
-                                        <Icon className={`w-5 h-5 relative z-10 ${isActive ? 'text-white' : 'text-dark-400'}`} />
-                                        <span className="relative z-10">{item.title}</span>
-                                        {isActive && (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="ml-auto w-1.5 h-1.5 bg-white rounded-full relative z-10"
-                                            />
-                                        )}
-                                    </motion.div>
-                                </Link>
-                            );
-                        })}
+                    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+                        {menuItems.map((item) => (
+                            <MenuItem key={item.title} item={item} />
+                        ))}
                     </nav>
 
                     {/* Footer */}

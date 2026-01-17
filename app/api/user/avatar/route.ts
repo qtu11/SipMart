@@ -50,8 +50,19 @@ export async function POST(request: NextRequest) {
         const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
 
-        // Update user profile
+        // Update user profile in DB
         await updateUser(userId, { avatar: publicUrl });
+
+        // Sync to Auth Metadata to ensure consistency across session-based components
+        const { error: authUpdateError } = await supabase.auth.admin.updateUserById(
+            userId,
+            { user_metadata: { avatar_url: publicUrl } }
+        );
+
+        if (authUpdateError) {
+            console.error('Failed to sync auth metadata:', authUpdateError);
+            // Non-blocking error, we still succeeded with the file upload and DB update
+        }
 
         return NextResponse.json({
             success: true,

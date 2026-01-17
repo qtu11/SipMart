@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import Image from 'next/image';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface RightSidebarProps {
     onChatSelect?: (contact: any) => void;
@@ -45,7 +46,7 @@ export default function RightSidebar({ onChatSelect }: RightSidebarProps) {
         const mapped = data.map(u => ({
             id: u.user_id,
             name: u.display_name || 'Người dùng',
-            avatar: u.avatar || u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.display_name || 'User')}&background=random`,
+            avatar: u.avatar || u.avatar_url, // UserAvatar handles fallback
             status: 'online'
         }));
         setContacts(mapped);
@@ -80,13 +81,10 @@ export default function RightSidebar({ onChatSelect }: RightSidebarProps) {
                             className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
                         >
                             <div className="relative">
-                                <Image
+                                <UserAvatar
                                     src={contact.avatar}
-                                    alt={contact.name}
-                                    width={40}
-                                    height={40}
-                                    className="rounded-full border border-gray-200 object-cover"
-                                    unoptimized={true}
+                                    name={contact.name}
+                                    className="w-10 h-10 rounded-full border border-gray-200"
                                 />
                                 <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                             </div>

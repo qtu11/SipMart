@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Bell, MessageCircle, User, Leaf, UserSearch } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
@@ -100,13 +100,9 @@ export default function SocialHeader({ user, onSearch, onNotificationClick, onMe
                             whileTap={{ scale: 0.95 }}
                             className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
                         >
-                            <Image
-                                src={user?.avatar || user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.name || user?.email || 'User')}&background=random`}
-                                alt="Avatar"
-                                width={32}
-                                height={32}
-                                className="rounded-full object-cover border border-gray-200"
-                                unoptimized={true}
+                            <UserAvatar
+                                user={user}
+                                className="w-8 h-8 rounded-full border border-gray-200"
                             />
                         </motion.div>
                     </Link>

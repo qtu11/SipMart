@@ -4,6 +4,11 @@ export interface User {
   studentId?: string;
   email: string;
   displayName?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
+  province?: string;
+  isProfilePublic?: boolean;
   avatar?: string;
   walletBalance: number; // Tiền cọc
   greenPoints: number;
@@ -17,6 +22,8 @@ export interface User {
   blacklistReason?: string;
   blacklistCount: number;
   friends?: string[]; // Array of user IDs
+  kycVerified?: boolean;
+  kycStatus?: 'none' | 'draft' | 'pending' | 'verified' | 'rejected';
 }
 
 export interface EcoAction {

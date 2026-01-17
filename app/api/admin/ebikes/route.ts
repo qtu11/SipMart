@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { verifyAdminFromRequest } from '@/lib/supabase/admin-auth';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * GET /api/admin/ebikes
  * Get all e-bikes and stations
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
+        const isAdmin = await verifyAdminFromRequest(request);
+        if (!isAdmin) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const supabase = getSupabaseAdmin();
 
         // Get all bikes with station info
         const { data: bikes, error: bikesError } = await supabase
@@ -77,13 +78,12 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
+        const isAdmin = await verifyAdminFromRequest(req);
+        if (!isAdmin) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const supabase = getSupabaseAdmin();
         const body = await req.json();
         const { action } = body;
 
@@ -197,13 +197,12 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const supabase = getSupabaseAdmin();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
+        const isAdmin = await verifyAdminFromRequest(req);
+        if (!isAdmin) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const supabase = getSupabaseAdmin();
         const { searchParams } = new URL(req.url);
         const bikeId = searchParams.get('bikeId');
         const stationId = searchParams.get('stationId');

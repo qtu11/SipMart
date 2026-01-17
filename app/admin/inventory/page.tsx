@@ -22,7 +22,9 @@ interface Cup {
 
 export default function InventoryPage() {
   const [cups, setCups] = useState<Cup[]>([]);
+  const [storeDistribution, setStoreDistribution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [filters, setFilters] = useState({
@@ -32,21 +34,43 @@ export default function InventoryPage() {
 
   const router = useRouter();
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
+    const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+    const email = adminKey ? adminKey.split(',')[0].trim() : '';
+
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    if (email && adminPassword) {
+      headers['x-admin-email'] = email;
+      headers['x-admin-password'] = adminPassword;
+    }
+    return headers;
+  };
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/admin/analytics', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setStoreDistribution(data.storeDistribution || []);
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
   const fetchCups = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Try to get admin credentials from user session first
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
-
-      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
-      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
-      const email = adminKey ? adminKey.split(',')[0].trim() : '';
-
-      // We need EITHER session OR admin keys
-      if (!session?.access_token && (!adminKey || !adminPassword)) {
-        throw new Error('Missing Admin Credentials (Login or Env Vars)');
-      }
+      const headers = await getAuthHeaders();
 
       const query = new URLSearchParams({
         page: pagination.page.toString(),
@@ -54,15 +78,6 @@ export default function InventoryPage() {
         status: filters.status,
         search: filters.search
       });
-
-      const headers: HeadersInit = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      if (email && adminPassword) {
-        headers['x-admin-email'] = email;
-        headers['x-admin-password'] = adminPassword;
-      }
 
       const res = await fetch(`/api/admin/cups?${query}`, { headers });
 
@@ -108,9 +123,10 @@ export default function InventoryPage() {
       }
       setAuthorized(true);
       fetchCups();
+      fetchAnalytics();
     });
     return () => unsubscribe();
-  }, [router, fetchCups]);
+  }, [router, fetchCups, fetchAnalytics]);
 
   useEffect(() => {
     if (authorized) {
@@ -123,33 +139,17 @@ export default function InventoryPage() {
 
   const updateCupStatus = async (cupId: string, newStatus: string) => {
     try {
-      const { data: { session } } = await import('@/lib/supabase/client').then(m => m.createClient().auth.getSession());
-
-      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
-      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
-      const email = adminKey ? adminKey.split(',')[0].trim() : '';
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      if (email && adminPassword) {
-        headers['x-admin-email'] = email;
-        headers['x-admin-password'] = adminPassword;
-      }
-
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/admin/cups/status', {
         method: 'PATCH',
-        headers,
+        headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ cupId, status: newStatus })
       });
 
       if (res.ok) {
         toast.success('Cập nhật trạng thái thành công');
         setCups(prev => prev.map(c => c.cup_id === cupId ? { ...c, status: newStatus as any } : c));
+        fetchAnalytics(); // Refresh stats
       } else {
         toast.error('Lỗi khi cập nhật trạng thái');
       }
@@ -168,27 +168,28 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-dark-800">Quản Lý Kho Ly</h1>
-            <p className="text-dark-500">Theo dõi toàn bộ ly trong hệ thống</p>
+            <h1 className="text-2xl font-bold text-dark-800 dark:text-white">Quản Lý Kho Ly</h1>
+            <p className="text-dark-500 dark:text-dark-400">Theo dõi phân bổ và tình trạng ly toàn hệ thống</p>
           </div>
+          {/* Controls */}
           <div className="flex gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
               <input
                 type="text"
                 placeholder="Tìm ID..."
-                className="pl-9 pr-4 py-2 rounded-xl border border-dark-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="pl-9 pr-4 py-2 rounded-xl border border-dark-200 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
                 value={filters.search}
                 onChange={e => setFilters({ ...filters, search: e.target.value })}
               />
             </div>
             <select
-              className="px-4 py-2 rounded-xl border border-dark-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-4 py-2 rounded-xl border border-dark-200 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
               value={filters.status}
               onChange={e => setFilters({ ...filters, status: e.target.value })}
             >
@@ -201,14 +202,61 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {/* Store Distribution Stats */}
+        {!analyticsLoading && storeDistribution.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {storeDistribution.map((store) => {
+              const lowStock = store.available < 5;
+              return (
+                <div
+                  key={store.storeId}
+                  className={`p-6 rounded-2xl border transition-all bg-white dark:bg-dark-800 shadow-sm
+                      ${lowStock ? 'border-orange-200 dark:border-orange-900/50' : 'border-gray-100 dark:border-dark-700'}
+                    `}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="font-bold text-lg text-dark-800 dark:text-white truncate pr-2">
+                      {store.storeName}
+                    </div>
+                    {lowStock && (
+                      <span className="shrink-0 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold border border-orange-200">
+                        Sắp hết
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-dark-700/50">
+                      <div className="text-xs text-gray-500 mb-1">Có sẵn</div>
+                      <div className="font-bold text-lg text-green-600">{store.available}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-dark-700/50">
+                      <div className="text-xs text-gray-500 mb-1">Đang dùng</div>
+                      <div className="font-bold text-lg text-blue-600">{store.inUse}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-dark-700/50">
+                      <div className="text-xs text-gray-500 mb-1">Vệ sinh</div>
+                      <div className="font-bold text-lg text-purple-600">{store.cleaning}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-gray-50 dark:bg-dark-700/50">
+                      <div className="text-xs text-gray-500 mb-1">Tổng</div>
+                      <div className="font-bold text-lg text-gray-800 dark:text-gray-200">{store.total}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Cup Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {cups.map((cup) => (
-            <div key={cup.cup_id} className="bg-white p-4 rounded-xl shadow-soft border border-dark-100 flex flex-col gap-3">
+            <div key={cup.cup_id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 dark:border-dark-700 dark:bg-dark-800 flex flex-col gap-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-mono text-xs text-dark-400">#{cup.cup_id?.slice(0, 8) || 'N/A'}</span>
-                  <div className="font-semibold text-dark-800">
+                  <span className="font-mono text-xs text-gray-400">#{cup.cup_id?.slice(0, 8) || 'N/A'}</span>
+                  <div className="font-semibold text-gray-800 dark:text-gray-200">
                     {cup.material === 'bamboo_fiber' ? 'Sợi Tre' : 'Nhựa PP'}
                   </div>
                 </div>
@@ -221,11 +269,11 @@ export default function InventoryPage() {
                 </span>
               </div>
 
-              <div className="text-sm text-dark-500">
+              <div className="text-sm text-gray-500">
                 Tạo lúc: {new Date(cup.created_at).toLocaleDateString()}
               </div>
 
-              <div className="mt-auto pt-3 border-t border-dark-50 flex gap-2">
+              <div className="mt-auto pt-3 border-t border-gray-100 dark:border-dark-700 flex gap-2">
                 {cup.status !== 'available' && (
                   <button
                     onClick={() => updateCupStatus(cup.cup_id, 'available')}
@@ -260,15 +308,15 @@ export default function InventoryPage() {
           <button
             disabled={pagination.page <= 1}
             onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-            className="px-4 py-2 rounded-lg border border-dark-200 disabled:opacity-50 hover:bg-dark-50"
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white disabled:opacity-50 hover:bg-gray-50"
           >
             Prev
           </button>
-          <span className="px-4 py-2">Page {pagination.page} of {pagination.totalPages}</span>
+          <span className="px-4 py-2 text-gray-600">Page {pagination.page} of {pagination.totalPages}</span>
           <button
             disabled={pagination.page >= pagination.totalPages}
             onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-            className="px-4 py-2 rounded-lg border border-dark-200 disabled:opacity-50 hover:bg-dark-50"
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white disabled:opacity-50 hover:bg-gray-50"
           >
             Next
           </button>

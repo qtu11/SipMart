@@ -44,17 +44,17 @@ export default function Footer() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="mb-8 sm:mb-12"
+          className="mb-6 sm:mb-12"
         >
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 group">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-              <Leaf className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4 group">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <Leaf className="w-4 h-4 sm:w-7 sm:h-7 text-white" />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-300 bg-clip-text text-transparent">
+              <h3 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-300 bg-clip-text text-transparent">
                 SipSmart
               </h3>
-              <p className="text-xs sm:text-sm text-dark-300">Mượn ly, Cứu hành tinh</p>
+              <p className="text-[10px] sm:text-sm text-dark-300">Mượn ly, Cứu hành tinh</p>
             </div>
           </Link>
           <p className="text-dark-300 text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed max-w-2xl">
@@ -83,7 +83,7 @@ export default function Footer() {
         </motion.div>
 
         {/* 3 Columns: Products | Legal & Support | Connect */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 mb-8 sm:mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 sm:gap-8 lg:gap-12 mb-8 sm:mb-12">
 
           {/* Column 1: Sản phẩm */}
           <motion.div
@@ -92,13 +92,13 @@ export default function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-primary-400">Sản phẩm</h4>
+            <h4 className="text-sm sm:text-lg font-bold mb-3 sm:mb-4 text-white">Sản phẩm</h4>
             <ul className="space-y-2 sm:space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-dark-300 hover:text-primary-400 transition-colors text-xs sm:text-sm flex items-center gap-2 group active:text-primary-400"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-xs sm:text-sm flex items-center gap-2 group"
                   >
                     <span className="w-0 group-hover:w-1.5 h-0.5 bg-primary-400 transition-all duration-200" />
                     {link.name}
@@ -115,13 +115,13 @@ export default function Footer() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-primary-400">Pháp lý & Hỗ trợ</h4>
+            <h4 className="text-sm sm:text-lg font-bold mb-3 sm:mb-4 text-white">Pháp lý & Hỗ trợ</h4>
             <ul className="space-y-2 sm:space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-dark-300 hover:text-primary-400 transition-colors text-xs sm:text-sm flex items-center gap-2 group active:text-primary-400"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-xs sm:text-sm flex items-center gap-2 group"
                   >
                     <span className="w-0 group-hover:w-1.5 h-0.5 bg-primary-400 transition-all duration-200" />
                     {link.name}
@@ -131,15 +131,16 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Column 3: Kết nối + Logo Bộ Công Thương */}
+          {/* Column 3: Kết nối + Logo Bộ Công Thương - Full width on very small screens if needed, or col-span-2 on mobile? Let's keep it in flow or stick to grid */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.3 }}
+            className="col-span-2 lg:col-span-1"
           >
-            <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-primary-400">Kết nối</h4>
-            <div className="flex items-center gap-3 sm:gap-4 mb-6">
+            <h4 className="text-sm sm:text-lg font-bold mb-3 sm:mb-4 text-white">Kết nối với SipSmart</h4>
+            <div className="flex items-center gap-3 mb-6">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
                 return (
@@ -149,29 +150,29 @@ export default function Footer() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={social.label}
-                    className="w-9 h-9 sm:w-10 sm:h-10 bg-dark-700 hover:bg-primary-500 active:bg-primary-600 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 hover:shadow-lg hover:shadow-primary-500/50 group"
+                    className="w-8 h-8 sm:w-10 sm:h-10 bg-dark-700/50 hover:bg-primary-500 rounded-full flex items-center justify-center transition-all duration-200 border border-dark-600 hover:border-primary-500 hover:scale-105"
                   >
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-dark-300 group-hover:text-white transition-colors" />
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-white transition-colors" />
                   </a>
                 );
               })}
             </div>
 
             {/* Logo Bộ Công Thương */}
-            <div className="mt-6 sm:mt-8">
-              <h5 className="text-sm font-semibold mb-3 text-dark-300">Đã đăng ký với</h5>
+            <div>
+              <h5 className="text-xs font-medium mb-2 text-gray-400">Đã đăng ký với Bộ Công Thương</h5>
               <a
                 href="http://online.gov.vn/Home/WebDetails/108058"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block bg-white p-3 rounded-lg hover:shadow-lg transition-all duration-200 hover:scale-105"
+                className="inline-block bg-white/5 p-2 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
               >
                 <Image
                   src="/bocongthuong.png"
                   alt="Logo Bộ Công Thương"
-                  width={120}
-                  height={48}
-                  className="h-10 sm:h-12 w-auto object-contain"
+                  width={100}
+                  height={38}
+                  className="h-8 sm:h-10 w-auto object-contain brightness-0 invert opacity-80 hover:opacity-100 transition-opacity"
                 />
               </a>
             </div>

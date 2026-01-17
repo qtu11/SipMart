@@ -29,23 +29,32 @@ export async function verifyAdminFromRequest(request: Request): Promise<boolean>
     // Get user from request headers (authorization header)
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
+      console.log('[AdminAuth] Missing Authorization header');
       return false;
     }
 
     const { data: { user }, error } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
 
     if (error || !user) {
+      console.log('[AdminAuth] Invalid token or user not found:', error?.message);
       return false;
     }
 
     const email = user.email;
     if (!email) {
+      console.log('[AdminAuth] User has no email');
       return false;
     }
 
     const isAdmin = isAdminEmail(email);
+    if (!isAdmin) {
+      console.log(`[AdminAuth] Access denied for email: ${email}. Allowed: ${process.env.ADMIN_KEY}`);
+    } else {
+      console.log(`[AdminAuth] Access granted for email: ${email}`);
+    }
     return isAdmin;
   } catch (error) {
+    console.error('[AdminAuth] Verification error:', error);
     return false;
   }
 }

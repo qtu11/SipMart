@@ -1,94 +1,51 @@
-// API: Payment Methods
-import { NextResponse } from 'next/server';
-import {
-  addPaymentMethod,
-  getUserPaymentMethods,
-  setDefaultPaymentMethod,
-  deletePaymentMethod,
-} from '@/lib/firebase/payments';
+/**
+ * Get Available Payment Methods API
+ * GET /api/payment/methods - Returns active payment methods
+ */
 
-export async function GET(request: Request) {
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const supabase = getSupabaseAdmin();
 
-    if (!userId) {
+    const { data, error } = await supabase
+      .from('payment_configs')
+      .select('provider_id, provider_name, logo_url, min_amount, max_amount, fee_percent, fee_fixed')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error('[API] /api/payment/methods error:', error);
       return NextResponse.json(
-        { success: false, error: 'Missing userId' },
-        { status: 400 }
+        { error: 'Failed to fetch payment methods' },
+        { status: 500 }
       );
     }
 
-    const methods = await getUserPaymentMethods(userId);
-    return NextResponse.json({ success: true, methods });
-  } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { success: false, error: err.message },
-      { status: 500 }
-    );
-  }
-}
+    const methods = (data || []).map((m: any) => ({
+      id: m.provider_id,
+      name: m.provider_name,
+      logo: m.logo_url,
+      minAmount: m.min_amount || 10000,
+      maxAmount: m.max_amount || 100000000,
+      feePercent: m.fee_percent || 0,
+      feeFixed: m.fee_fixed || 0,
+    }));
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { userId, type, provider, accountNumber, accountName, isDefault } = body;
-
-    if (!userId || !type || !provider) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    const result = await addPaymentMethod(userId, {
-      type,
-      provider,
-      accountNumber,
-      accountName,
-      isDefault: isDefault || false,
-      isActive: true,
+    return NextResponse.json({
+      success: true,
+      methods,
     });
 
-    return NextResponse.json(result);
-  } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { success: false, error: err.message },
+  } catch (error: any) {
+    console.error('[API] /api/payment/methods error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
 }
-
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const { userId, methodId, action } = body;
-
-    if (!userId || !methodId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    let result;
-    if (action === 'set_default') {
-      result = await setDefaultPaymentMethod(userId, methodId);
-    } else if (action === 'delete') {
-      result = await deletePaymentMethod(userId, methodId);
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Invalid action' },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(result);
-  } catch (error: unknown) {
-    const err = error as Error;    return NextResponse.json(
-      { success: false, error: err.message },
-      { status: 500 }
-    );
-  }
-}
-

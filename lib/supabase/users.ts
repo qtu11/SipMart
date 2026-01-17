@@ -142,6 +142,11 @@ export async function updateUser(
 
   if (data.email !== undefined) updateData.email = data.email;
   if (data.displayName !== undefined) updateData.display_name = data.displayName;
+  if (data.fullName !== undefined) updateData.full_name = data.fullName;
+  if (data.phoneNumber !== undefined) updateData.phone_number = data.phoneNumber;
+  if (data.address !== undefined) updateData.address = data.address;
+  if (data.province !== undefined) updateData.province = data.province;
+  if (data.isProfilePublic !== undefined) updateData.is_profile_public = data.isProfilePublic;
   if (data.avatar !== undefined) updateData.avatar = data.avatar;
   if (data.walletBalance !== undefined) updateData.wallet_balance = data.walletBalance;
   if (data.greenPoints !== undefined) updateData.green_points = data.greenPoints;
@@ -309,6 +314,11 @@ function mapUserFromDb(row: any): User {
     userId: row.user_id,
     email: row.email,
     displayName: row.display_name || undefined,
+    fullName: row.full_name || undefined,
+    phoneNumber: row.phone_number || undefined,
+    address: row.address || undefined,
+    province: row.province || undefined,
+    isProfilePublic: row.is_profile_public ?? true, // Default to true if null/undefined
     avatar: row.avatar || undefined,
     walletBalance: parseFloat(row.wallet_balance) || 0,
     greenPoints: row.green_points || 0,
@@ -329,6 +339,8 @@ function mapUserFromDb(row: any): User {
     blacklistReason: row.blacklist_reason || undefined,
     blacklistCount: row.blacklist_count || 0,
     studentId: row.student_id || undefined,
+    kycVerified: row.kyc_verified || false,
+    kycStatus: row.kyc_status || 'none',
   };
 }
 

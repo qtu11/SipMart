@@ -9,6 +9,15 @@ import {
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import SimpleQRCode from '@/components/SimpleQRCode';
+import { createClient } from '@/lib/supabase/client';
+import { isAdminEmail } from '@/lib/supabase/admin-auth';
+import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const LocationPickerMap = dynamic(() => import('@/components/map/LocationPickerMap'), {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400">Đang tải bản đồ...</div>
+});
 
 type QRType = 'cup' | 'ebike' | 'station' | 'bus';
 
@@ -22,6 +31,8 @@ interface QRItem {
 }
 
 export default function QRManagementPage() {
+    const router = useRouter();
+    const supabase = createClient();
     const [activeType, setActiveType] = useState<QRType>('cup');
     const [items, setItems] = useState<QRItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,18 +51,33 @@ export default function QRManagementPage() {
     const [stores, setStores] = useState<any[]>([]);
     const [stations, setStations] = useState<any[]>([]);
 
+    // Auth check
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session || !isAdminEmail(session.user.email || '')) {
+                router.replace('/admin');
+            }
+        };
+        checkAuth();
+    }, [router, supabase]);
+
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const headers = { 'Authorization': `Bearer ${session.access_token}` };
+
             // Fetch stores for cup creation
-            const storesRes = await fetch('/api/admin/stores');
+            const storesRes = await fetch('/api/admin/stores', { headers });
             if (storesRes.ok) {
                 const storesData = await storesRes.json();
                 setStores(storesData.stores || []);
             }
 
             // Fetch stations for e-bike creation
-            const stationsRes = await fetch('/api/admin/ebikes');
+            const stationsRes = await fetch('/api/admin/ebikes', { headers });
             if (stationsRes.ok) {
                 const stationsData = await stationsRes.json();
                 setStations(stationsData.stations || []);
@@ -64,12 +90,16 @@ export default function QRManagementPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [supabase]);
 
     const fetchItems = async () => {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const headers = { 'Authorization': `Bearer ${session.access_token}` };
+
             if (activeType === 'cup') {
-                const res = await fetch('/api/admin/cups');
+                const res = await fetch('/api/admin/cups', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setItems((data.cups || []).map((c: any) => ({
@@ -82,7 +112,7 @@ export default function QRManagementPage() {
                     })));
                 }
             } else if (activeType === 'ebike') {
-                const res = await fetch('/api/admin/ebikes');
+                const res = await fetch('/api/admin/ebikes', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setItems((data.bikes || []).map((b: any) => ({
@@ -95,7 +125,7 @@ export default function QRManagementPage() {
                     })));
                 }
             } else if (activeType === 'station') {
-                const res = await fetch('/api/admin/ebikes');
+                const res = await fetch('/api/admin/ebikes', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setItems((data.stations || []).map((s: any) => ({
@@ -108,7 +138,7 @@ export default function QRManagementPage() {
                     })));
                 }
             } else if (activeType === 'bus') {
-                const res = await fetch('/api/admin/buses');
+                const res = await fetch('/api/admin/buses', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setItems((data.buses || []).map((b: any) => ({
@@ -144,9 +174,17 @@ export default function QRManagementPage() {
         }
         setCreating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
             const res = await fetch('/api/admin/cups', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     storeId: cupForm.storeId,
                     count: cupForm.quantity,
@@ -177,12 +215,21 @@ export default function QRManagementPage() {
         }
         setCreating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
             const createdBikes = [];
             for (let i = 0; i < bikeForm.quantity; i++) {
                 const bikeCode = `${bikeForm.prefix}-${String(Date.now()).slice(-6)}-${i + 1}`;
                 const res = await fetch('/api/admin/ebikes', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
                     body: JSON.stringify({
                         action: 'create_bike',
                         bikeCode,
@@ -212,9 +259,18 @@ export default function QRManagementPage() {
         }
         setCreating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
             const res = await fetch('/api/admin/ebikes', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     action: 'create_station',
                     name: stationForm.name,
@@ -256,9 +312,18 @@ export default function QRManagementPage() {
         }
         setCreating(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
             const res = await fetch('/api/admin/buses', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     routeCode: busForm.routeCode,
                     routeName: busForm.routeName,
@@ -285,12 +350,16 @@ export default function QRManagementPage() {
     const handleSeedData = async () => {
         setCreating(true);
         try {
-            const res = await fetch('/api/admin/setup-data', { method: 'POST' });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const headers = { 'Authorization': `Bearer ${session.access_token}` };
+
+            const res = await fetch('/api/admin/setup-data', { method: 'POST', headers });
             if (res.ok) {
                 const data = await res.json();
                 toast.success(data.message);
                 // Refresh data
-                const storesRes = await fetch('/api/admin/stores');
+                const storesRes = await fetch('/api/admin/stores', { headers });
                 if (storesRes.ok) {
                     const storesData = await storesRes.json();
                     setStores(storesData.stores || []);
@@ -590,24 +659,14 @@ export default function QRManagementPage() {
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Vĩ độ</label>
-                                        <input
-                                            type="text"
-                                            value={stationForm.lat}
-                                            onChange={(e) => setStationForm({ ...stationForm, lat: e.target.value })}
-                                            placeholder="10.762622"
-                                            className="w-full px-4 py-2 border rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Kinh độ</label>
-                                        <input
-                                            type="text"
-                                            value={stationForm.lng}
-                                            onChange={(e) => setStationForm({ ...stationForm, lng: e.target.value })}
-                                            placeholder="106.660172"
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Vị trí trạm (Kéo thả trên bản đồ)</label>
+                                        <LocationPickerMap
+                                            initialLat={stationForm.lat ? parseFloat(stationForm.lat) : 10.762622}
+                                            initialLng={stationForm.lng ? parseFloat(stationForm.lng) : 106.660172}
+                                            onLocationChange={(lat, lng) => setStationForm(prev => ({ ...prev, lat: lat.toString(), lng: lng.toString() }))}
+                                            existingStations={stations}
+                                            existingStores={stores}
                                         />
                                     </div>
                                 </div>

@@ -24,9 +24,11 @@ import FAQSection from '@/components/landing/FAQSection';
 import SocialLayout from '@/components/social/SocialLayout';
 import Feed from '@/components/social/Feed';
 
+
 function HomeContent() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile Menu State
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -107,6 +109,7 @@ function HomeContent() {
             </div>
           </Link>
 
+          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-dark-600">
             <Link href="/about" className="hover:text-primary-600 transition-colors">Về dự án</Link>
             <Link href="/features" className="hover:text-primary-600 transition-colors">Tính năng</Link>
@@ -114,7 +117,7 @@ function HomeContent() {
             <Link href="/support" className="hover:text-primary-600 transition-colors">Hỗ trợ</Link>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4">
             <Link
               href="/auth/login"
               className="bg-dark-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg hover:shadow-xl hover:bg-dark-800 transition-all hover:-translate-y-0.5"
@@ -123,7 +126,45 @@ function HomeContent() {
               Đăng nhập
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-dark-600"
+          >
+            {mobileMenuOpen ? (
+              // Simple X icon replacement since we can't import X easily if it wasn't imported
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
+            ) : (
+              // Simple Menu icon replacement
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+            )}
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-white border-t border-gray-100 shadow-xl overflow-hidden"
+          >
+            <div className="flex flex-col p-4 space-y-4 font-medium text-dark-700">
+              <Link href="/about" className="py-2 border-b border-gray-50" onClick={() => setMobileMenuOpen(false)}>Về dự án</Link>
+              <Link href="/features" className="py-2 border-b border-gray-50" onClick={() => setMobileMenuOpen(false)}>Tính năng</Link>
+              <Link href="/map" className="py-2 border-b border-gray-50" onClick={() => setMobileMenuOpen(false)}>Bản đồ</Link>
+              <Link href="/support" className="py-2 border-b border-gray-50" onClick={() => setMobileMenuOpen(false)}>Hỗ trợ</Link>
+              <Link
+                href="/auth/login"
+                className="bg-primary-600 text-white py-3 rounded-xl text-center font-bold shadow-lg"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Đăng nhập / Đăng ký
+              </Link>
+            </div>
+          </motion.div>
+        )}
       </header>
 
       {/* Main Sections */}

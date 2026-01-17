@@ -9,6 +9,15 @@ import {
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import SimpleQRCode from '@/components/SimpleQRCode';
+import { createClient } from '@/lib/supabase/client';
+import { isAdminEmail } from '@/lib/supabase/admin-auth';
+import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const LocationPickerMap = dynamic(() => import('@/components/map/LocationPickerMap'), {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400">Đang tải bản đồ...</div>
+});
 
 interface EBike {
     bike_id: string;
@@ -30,6 +39,8 @@ interface Station {
 }
 
 export default function EBikeManagementPage() {
+    const router = useRouter();
+    const supabase = createClient();
     const [bikes, setBikes] = useState<EBike[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
     const [loading, setLoading] = useState(true);
@@ -57,10 +68,28 @@ export default function EBikeManagementPage() {
     // QR Modal
     const [qrData, setQrData] = useState<{ type: string; id: string; code: string } | null>(null);
 
+    // Auth check
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session || !isAdminEmail(session.user.email || '')) {
+                router.replace('/admin');
+            }
+        };
+        checkAuth();
+    }, [router, supabase]);
+
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/ebikes');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const res = await fetch('/api/admin/ebikes', {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setBikes(data.bikes || []);
@@ -71,7 +100,7 @@ export default function EBikeManagementPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [supabase]);
 
     useEffect(() => {
         fetchData();
@@ -84,9 +113,18 @@ export default function EBikeManagementPage() {
         }
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
             const res = await fetch('/api/admin/ebikes', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     action: 'create_bike',
                     bikeCode: bikeForm.bikeCode,
@@ -122,9 +160,18 @@ export default function EBikeManagementPage() {
         }
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Vui lòng đăng nhập lại');
+                return;
+            }
+
             const res = await fetch('/api/admin/ebikes', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     action: 'create_station',
                     name: stationForm.name,
@@ -431,24 +478,13 @@ export default function EBikeManagementPage() {
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vĩ độ (Lat)</label>
-                                    <input
-                                        type="text"
-                                        value={stationForm.gpsLat}
-                                        onChange={(e) => setStationForm({ ...stationForm, gpsLat: e.target.value })}
-                                        placeholder="10.762622"
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kinh độ (Lng)</label>
-                                    <input
-                                        type="text"
-                                        value={stationForm.gpsLng}
-                                        onChange={(e) => setStationForm({ ...stationForm, gpsLng: e.target.value })}
-                                        placeholder="106.660172"
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Vị trí trạm (Kéo thả trên bản đồ)</label>
+                                    <LocationPickerMap
+                                        initialLat={stationForm.gpsLat ? parseFloat(stationForm.gpsLat) : 10.762622}
+                                        initialLng={stationForm.gpsLng ? parseFloat(stationForm.gpsLng) : 106.660172}
+                                        onLocationChange={(lat, lng) => setStationForm(prev => ({ ...prev, gpsLat: lat.toString(), gpsLng: lng.toString() }))}
+                                        existingStations={stations}
                                     />
                                 </div>
                             </div>
