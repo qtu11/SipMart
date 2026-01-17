@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Loop, Leaf, Zap, Smartphone, ShieldCheck, Globe } from 'lucide-react';
+import { ArrowRight, Sparkles, Repeat, Leaf, Zap, Smartphone, ShieldCheck, Globe } from 'lucide-react';
 
 export default function HeroSection() {
     return (
