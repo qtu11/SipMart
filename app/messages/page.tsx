@@ -1215,7 +1215,7 @@ function MessagesContent() {
                                             alt={convDisplayName}
                                             width={56}
                                             height={56}
-                                            className="rounded-full object-cover"
+                                            className="rounded-full object-cover w-14 h-14"
                                             unoptimized
                                         />
                                         <span className={`absolute bottom-0 right-0 w-4 h-4 ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'} rounded-full border-2 border-white`} />
@@ -1257,7 +1257,7 @@ function MessagesContent() {
                                     alt="Avatar"
                                     width={40}
                                     height={40}
-                                    className="rounded-full"
+                                    className="rounded-full object-cover w-10 h-10"
                                     unoptimized
                                 />
                                 <div>
@@ -1330,7 +1330,7 @@ function MessagesContent() {
                                         alt="Avatar"
                                         width={80}
                                         height={80}
-                                        className="rounded-full mb-4"
+                                        className="rounded-full mb-4 object-cover w-20 h-20"
                                         unoptimized
                                     />
                                     <h3 className="font-semibold text-lg">{displayName}</h3>
@@ -1349,7 +1349,7 @@ function MessagesContent() {
                                                     alt="Avatar"
                                                     width={28}
                                                     height={28}
-                                                    className="rounded-full mr-2 self-end"
+                                                    className="rounded-full mr-2 self-end object-cover w-7 h-7"
                                                     unoptimized
                                                 />
                                             )}
@@ -1626,7 +1626,7 @@ function MessagesContent() {
                                     alt="Avatar"
                                     width={80}
                                     height={80}
-                                    className="rounded-full mx-auto mb-3"
+                                    className="rounded-full mx-auto mb-3 object-cover w-20 h-20"
                                     unoptimized
                                 />
                                 <h3 className="font-bold text-lg text-gray-900">{displayName}</h3>
@@ -1923,7 +1923,7 @@ function MessagesContent() {
                                     alt={displayName}
                                     width={150}
                                     height={150}
-                                    className="rounded-full mx-auto ring-4 ring-white/20"
+                                    className="rounded-full mx-auto ring-4 ring-white/20 object-cover w-[150px] h-[150px]"
                                     unoptimized
                                 />
                                 {callType === 'video' && (
@@ -2031,7 +2031,7 @@ function MessagesContent() {
                                 alt={incomingCall.fromName}
                                 width={56}
                                 height={56}
-                                className="rounded-full animate-pulse ring-2 ring-green-500"
+                                className="rounded-full animate-pulse ring-2 ring-green-500 object-cover w-14 h-14"
                                 unoptimized
                             />
                             <div>

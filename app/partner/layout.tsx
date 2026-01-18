@@ -100,7 +100,7 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                                     alt="User"
                                     width={40}
                                     height={40}
-                                    className="rounded-full bg-gray-200"
+                                    className="rounded-full bg-gray-200 object-cover w-10 h-10"
                                 />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-bold text-gray-800 truncate">{user?.displayName || "Đối tác"}</p>

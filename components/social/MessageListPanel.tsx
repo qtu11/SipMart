@@ -185,7 +185,7 @@ export default function MessageListPanel({ currentUserId, onClose, onChatSelect 
                                             alt={contact.name}
                                             width={48}
                                             height={48}
-                                            className="rounded-full object-cover border border-gray-200"
+                                            className="rounded-full object-cover border border-gray-200 w-12 h-12"
                                             unoptimized={true}
                                         />
                                         {contact.status === 'online' && (

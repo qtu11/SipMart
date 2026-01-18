@@ -26,7 +26,7 @@ export default function ChatAI() {
     {
       id: '1',
       role: 'assistant',
-      content: '👋 *Xin chào!* Tôi là **SipBot** - Trợ lý ảo AI của SipSmart.\n\nTôi ở đây để đồng hành cùng bạn trên hành trình Sống Xanh:\n\n🥤 **Mượn Ly**: Quy trình mượn/trả ly tại các trạm.\n🚲 **Xe Điện (e-Bike)**: Hướng dẫn thuê xe và mở khóa.\n🚌 **Bus & Metro**: Tích điểm khi sử dụng phương tiện công cộng.\n\nBạn cần tôi hỗ trợ về **Xe điện** hay **Mượn ly** ngay bây giờ?',
+      content: '👋 **Xin chào!** Tôi là **SipBot** - Trợ lý ảo AI của SipSmart.\n\nTôi ở đây để đồng hành cùng bạn trên hành trình Sống Xanh:\n\n🥤 **Mượn Ly**: Quy trình mượn/trả ly tại các trạm.\n🚲 **Xe Điện (e-Bike)**: Hướng dẫn thuê xe và mở khóa.\n🚌 **Bus & Metro**: Tích điểm khi sử dụng phương tiện công cộng.\n\nBạn cần tôi hỗ trợ về **Xe điện** hay **Mượn ly** ngay bây giờ?',
       timestamp: new Date(),
     },
   ]);

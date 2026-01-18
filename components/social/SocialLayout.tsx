@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import SocialHeader from './Header';
 import LeftSidebar from './LeftSidebar';
@@ -24,6 +25,34 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [showMessageList, setShowMessageList] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+    // State to hold merged user data (session + db profile)
+    const [mergedUser, setMergedUser] = useState<any>(user);
+
+    // Fetch fresh profile data
+    React.useEffect(() => {
+        const fetchProfile = async () => {
+            const userId = user?.id || user?.user_id;
+            if (!userId) return;
+
+            // Only fetch if we don't have fresh data (optional optimization)
+            // But to ensure sync, we fetch.
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
+
+            if (data && !error) {
+                // Merge session user with db profile data
+                // DB data takes precedence (avatar, display_name)
+                setMergedUser((prev: any) => ({ ...prev, ...data, id: userId }));
+            }
+        };
+
+        fetchProfile();
+        setMergedUser(user); // Reset to prop first when prop changes
+    }, [user]);
 
     const handleSearch = (query: string) => {
         console.log("Searching for:", query);
@@ -55,7 +84,7 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-20 md:pb-0">
             <SocialHeader
-                user={user}
+                user={mergedUser}
                 onSearch={handleSearch}
                 onNotificationClick={() => setShowNotifications(!showNotifications)}
                 onMessagesClick={() => setShowMessageList(!showMessageList)}
@@ -66,7 +95,7 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     {/* Left Column - Fixed on Desktop */}
                     <div className="hidden md:block md:col-span-3 lg:col-span-3 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
-                        <LeftSidebar user={user} />
+                        <LeftSidebar user={mergedUser} />
                     </div>
 
                     {/* Center Column - Feed Scrollable */}
@@ -88,7 +117,7 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
             <MobileMenu
                 isOpen={showMobileMenu}
                 onClose={() => setShowMobileMenu(false)}
-                user={user}
+                user={mergedUser}
             />
 
             {/* Notification Panel */}
@@ -105,7 +134,7 @@ export default function SocialLayout({ children, user }: SocialLayoutProps) {
             <AnimatePresence>
                 {showMessageList && (
                     <MessageListPanel
-                        currentUserId={user.id}
+                        currentUserId={mergedUser?.id || user?.id}
                         onClose={() => setShowMessageList(false)}
                         onChatSelect={(contact) => {
                             handleChatSelect(contact);

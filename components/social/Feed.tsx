@@ -6,6 +6,8 @@ import { toast } from 'react-hot-toast';
 import NextImage from 'next/image';
 import BorrowedCups from '@/components/BorrowedCups';
 import UserAvatar from '@/components/ui/UserAvatar';
+import StoryViewer from './StoryViewer';
+import StoryEditor from './StoryEditor';
 
 
 export default function Feed({ user }: { user: any }) {
@@ -19,6 +21,10 @@ export default function Feed({ user }: { user: any }) {
 
     // Stories state
     const [stories, setStories] = useState<any[]>([]);
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [viewerStartIndex, setViewerStartIndex] = useState(0);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [editorFile, setEditorFile] = useState<File | undefined>(undefined);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const storyInputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +53,14 @@ export default function Feed({ user }: { user: any }) {
         if (data) setStories(data);
     }, []);
 
+    // ... (previous imports)
+
+    // ... inside component ...
+    const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null);
+    const [commentText, setCommentText] = useState('');
+
+    // ... (fetchStories)
+
     const fetchPosts = useCallback(async () => {
         try {
             const { data, error } = await supabase
@@ -62,7 +76,8 @@ export default function Feed({ user }: { user: any }) {
 
             const formattedPosts = data.map((post: any) => ({
                 ...post,
-                is_liked: post.is_liked && post.is_liked.length > 0
+                // Check if CURRENT user's ID exists in the returned likes array
+                is_liked: post.is_liked && Array.isArray(post.is_liked) && post.is_liked.some((l: any) => l.user_id === user.id)
             }));
 
             setPosts(formattedPosts);
@@ -71,46 +86,64 @@ export default function Feed({ user }: { user: any }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user.id]);
+
+    // ... (other handlers)
+
+    const handleLike = async (postId: string, currentLikeStatus: boolean) => {
+        // Optimistic UI update
+        setPosts((prev: any[]) => prev.map((p: any) =>
+            p.post_id === postId
+                ? { ...p, likes: (p.likes || 0) + (currentLikeStatus ? -1 : 1), is_liked: !currentLikeStatus }
+                : p
+        ));
+
+        try {
+            const { error } = await supabase.rpc('toggle_post_like', { p_post_id: postId });
+            if (error) throw error;
+        } catch (error) {
+            console.error('Like error:', error);
+            fetchPosts(); // Revert on error
+            toast.error('Không thể thả lá, vui lòng thử lại');
+        }
+    };
+
+    const handleShare = (postId: string) => {
+        navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
+        toast.success('Đã sao chép liên kết vào bộ nhớ tạm!');
+    };
+
+    const toggleComments = (postId: string) => {
+        setActiveCommentPost(activeCommentPost === postId ? null : postId);
+    };
+
+    const handleSendComment = async (postId: string) => {
+        if (!commentText.trim()) return;
+        toast.success('Tính năng bình luận đang được cập nhật...');
+        setCommentText('');
+        // TODO: Implement actual comment insertion to DB
+    };
+
+    // ... (render) ...
+
+
 
     const handleCreateStoryClick = () => {
         storyInputRef.current?.click();
     };
 
-    const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('Ảnh/Video quá lớn (tối đa 5MB)');
-            return;
+    const handleStoryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) {
+            setEditorFile(e.target.files[0]);
+            setEditorOpen(true);
         }
+        // Reset input
+        e.target.value = '';
+    };
 
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const base64Content = reader.result as string;
-
-            try {
-                const { error } = await supabase.from('stories').insert({
-                    user_id: user.id,
-                    type: 'image',
-                    content: base64Content,
-                    thumbnail: base64Content,
-                    display_name: user?.user_metadata?.full_name || user?.user_metadata?.name || 'Người dùng',
-                    avatar: user?.user_metadata?.avatar_url,
-                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                    status: 'pending'
-                });
-
-                if (error) throw error;
-                toast.success('Đã gửi tin! Vui lòng chờ duyệt.');
-                fetchStories();
-            } catch (err: any) {
-                console.error('Story upload error:', err);
-                toast.error('Lỗi khi đăng tin: ' + (err.message || 'Lỗi không xác định'));
-            }
-        };
-        reader.readAsDataURL(file);
+    const handleOpenStory = (index: number) => {
+        setViewerStartIndex(index);
+        setViewerOpen(true);
     };
 
     useEffect(() => {
@@ -192,22 +225,7 @@ export default function Feed({ user }: { user: any }) {
         }
     };
 
-    const handleLike = async (postId: string, currentLikeStatus: boolean) => {
-        // Optimistic UI update
-        setPosts((prev: any[]) => prev.map((p: any) =>
-            p.post_id === postId
-                ? { ...p, likes: (p.likes || 0) + (currentLikeStatus ? -1 : 1), is_liked: !currentLikeStatus }
-                : p
-        ));
 
-        try {
-            const { error } = await supabase.rpc('toggle_post_like', { p_post_id: postId });
-            if (error) throw error;
-        } catch (error) {
-            console.error('Like error:', error);
-            fetchPosts();
-        }
-    };
 
     return (
         <div className="space-y-6">
@@ -236,32 +254,31 @@ export default function Feed({ user }: { user: any }) {
                         whileHover={{ scale: 1.02, y: -4 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleCreateStoryClick}
-                        className="flex-shrink-0 w-[120px] h-[200px] rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-green-500/10 relative group bg-gradient-to-br from-white to-gray-50 border border-gray-100"
+                        className="flex-shrink-0 w-[120px] h-[200px] rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-green-500/10 relative group bg-white border border-gray-100"
                     >
-                        {/* User avatar section */}
-                        <div className="h-[60%] w-full relative overflow-hidden bg-gray-100">
-                            <UserAvatar
-                                user={user}
-                                className="w-full h-full"
-                                size={120}
+                        {/* User avatar section - Full Image Coverage */}
+                        <div className="h-[65%] w-full relative overflow-hidden bg-gray-100 group-hover:opacity-90 transition-opacity">
+                            <NextImage
+                                src={user?.avatar || user?.avatar_url || user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.user_metadata?.full_name || 'User')}&background=random`}
+                                alt="Create Story"
+                                fill
+                                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                unoptimized
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
+                            {/* Dark gradient overlay for contrast */}
+                            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
                         </div>
 
                         {/* Create button section */}
-                        <div className="h-[40%] w-full bg-white relative flex flex-col items-center justify-end pb-3">
+                        <div className="h-[35%] w-full bg-white relative flex flex-col items-center justify-end pb-3 z-10">
                             <motion.div
-                                className="absolute -top-5 w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center border-4 border-white text-white shadow-lg shadow-green-500/40 z-10"
+                                className="absolute -top-5 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center border-4 border-white text-white shadow-md z-20"
                                 whileHover={{ scale: 1.1 }}
                             >
-                                <span className="text-xl font-bold">+</span>
+                                <span className="text-2xl font-bold leading-none mb-1">+</span>
                             </motion.div>
-                            <span className="text-sm font-bold text-gray-800 mt-2">Tạo tin</span>
-                            <span className="text-[10px] text-gray-500">Chia sẻ ngay</span>
+                            <span className="text-xs font-bold text-gray-900 mt-3">Tạo tin</span>
                         </div>
-
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 to-teal-500/0 group-hover:from-green-500/5 group-hover:to-teal-500/5 transition-all duration-500" />
                     </motion.div>
 
                     {/* Friends Stories */}
@@ -273,11 +290,12 @@ export default function Feed({ user }: { user: any }) {
                             transition={{ delay: index * 0.1, duration: 0.3 }}
                             whileHover={{ scale: 1.02, y: -4 }}
                             whileTap={{ scale: 0.98 }}
+                            onClick={() => handleOpenStory(index)}
                             className="flex-shrink-0 w-[120px] h-[200px] rounded-2xl overflow-hidden cursor-pointer shadow-lg shadow-gray-200/50 relative group"
                         >
                             {/* Story image */}
                             <NextImage
-                                src={story.thumbnail || story.content || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.userName || 'Story')}&background=4ade80`}
+                                src={story.content || story.thumbnail || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.displayName || 'Story')}&background=4ade80`}
                                 className="object-cover group-hover:scale-110 transition-transform duration-700"
                                 alt="Story"
                                 fill
@@ -334,6 +352,35 @@ export default function Feed({ user }: { user: any }) {
                     )}
                 </motion.div>
             </div>
+
+            {/* Story Viewer Modal */}
+            <AnimatePresence>
+                {viewerOpen && (
+                    <StoryViewer
+                        stories={stories}
+                        initialStoryIndex={viewerStartIndex}
+                        onClose={() => setViewerOpen(false)}
+                        currentUserId={user.id}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Story Editor Modal */}
+            <AnimatePresence>
+                {editorOpen && (
+                    <StoryEditor
+                        initialFile={editorFile}
+                        onClose={() => setEditorOpen(false)}
+                        onPosted={() => {
+                            fetchStories();
+                            setEditorOpen(false);
+                        }}
+                        currentUserId={user.id}
+                        userName={user?.user_metadata?.full_name || user?.user_metadata?.name || 'Tôi'}
+                        userAvatar={user?.user_metadata?.avatar_url || user?.avatar}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Borrowed Cups Widget - Show Active Borrowed Cups */}
             <BorrowedCups />
@@ -516,15 +563,54 @@ export default function Feed({ user }: { user: any }) {
                                 <Heart className={`w-5 h-5 ${post.is_liked ? 'fill-current' : ''}`} />
                                 <span>Thả lá</span>
                             </button>
-                            <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-600 font-medium text-sm">
+                            <button
+                                onClick={() => toggleComments(post.post_id)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm ${activeCommentPost === post.post_id ? 'text-blue-600' : 'text-gray-600'}`}
+                            >
                                 <MessageCircle className="w-5 h-5" />
                                 <span>Bình luận</span>
                             </button>
-                            <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-600 font-medium text-sm">
+                            <button
+                                onClick={() => handleShare(post.post_id)}
+                                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-50 transition-colors text-gray-600 font-medium text-sm"
+                            >
                                 <Share2 className="w-5 h-5" />
                                 <span>Chia sẻ</span>
                             </button>
                         </div>
+
+                        {/* Comment Input */}
+                        <AnimatePresence>
+                            {activeCommentPost === post.post_id && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="px-4 pb-4 overflow-hidden border-t border-gray-50 pt-3"
+                                >
+                                    <div className="flex gap-2">
+                                        <UserAvatar user={user} className="w-8 h-8 rounded-full" />
+                                        <div className="flex-1 relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Viết bình luận..."
+                                                className="w-full bg-gray-100 rounded-2xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500/20 transition-all pr-10"
+                                                value={commentText}
+                                                onChange={(e) => setCommentText(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSendComment(post.post_id)}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={() => handleSendComment(post.post_id)}
+                                                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full ${commentText.trim() ? 'text-green-600 hover:bg-green-50' : 'text-gray-400'}`}
+                                            >
+                                                <Send className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 ))}
             </div>
