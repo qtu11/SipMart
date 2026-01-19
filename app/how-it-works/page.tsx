@@ -89,7 +89,7 @@ export default function HowItWorksPage() {
               step="02"
               title="Sử Dụng"
               desc="Thưởng thức đồ uống yêu thích của bạn."
-              detail="Bạn có 24h để sử dụng ly miễn phí trước khi tính phí trễ."
+              detail="Bạn có 2h để sử dụng ly miễn phí trước khi tính phí trễ."
               icon={Coffee}
               color="orange"
               align="right"
@@ -98,7 +98,7 @@ export default function HowItWorksPage() {
               step="03"
               title="Trả Ly & Hoàn Tiền"
               desc="Trả ly tại bất kỳ trạm thu hồi SipSmart nào."
-              detail="Hoàn lại 100% tiền cọc (20.000 VNĐ) về ví ngay lập tức."
+              detail="Hoàn lại 98% tiền cọc (18.000 VNĐ) về ví ngay lập tức."
               icon={Wallet}
               color="green"
               align="left"
